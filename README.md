@@ -1,7 +1,7 @@
 # media_soup_conferencing
 Audio video conferencing solution using media soup
 
-#How To Run Client
+How To Run Client
 client page has to be hosted. Currently express server is used to host it.
 
 cd client
