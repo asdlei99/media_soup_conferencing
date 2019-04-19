@@ -1,0 +1,17 @@
+{
+  "name": "mediasoup_server",
+  "version": "0.0.1",
+  "description": "server to support audio video conferencing",
+  "main": "index_websocket.js",
+  "scripts": {
+    "start": "node index_websocket.js"
+  },
+  "keywords": [
+    "conferencing"
+  ],
+  "author": "Anil",
+  "dependencies": {
+    "mediasoup",
+	"websocket"
+  }
+}

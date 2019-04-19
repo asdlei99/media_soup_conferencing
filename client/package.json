@@ -1,0 +1,16 @@
+{
+  "name": "conferencing_client",
+  "version": "0.0.1",
+  "description": "A basic example of how to use Mediasoup on client side",
+  "main": "host_server.js",
+  "scripts": {
+    "start": "node host_server.js"
+  },
+  "keywords": [
+    "conference"
+  ],
+  "author": "Anil",
+  "dependencies": {
+    "express": "^4.16.3"
+  }
+}
