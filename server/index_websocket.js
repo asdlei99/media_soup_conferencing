@@ -53,8 +53,10 @@ function handle_audio_conference(request){
         if(response.type == "request_room_join"){
            console.log("request room join received");
             if (rooms.has(roomId)) {
+              console.log("existing room found for request from "+ peerName);
               room = rooms.get(roomId);
             } else {
+              console.log("creating new room for "+ peerName)
               room = mediaServer.Room(config.mediasoup.mediaCodecs);
               rooms.set(roomId, room);
               room.on('close', () => {
