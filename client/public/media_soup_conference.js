@@ -31,13 +31,9 @@ class media_soup_conference {
         this.stream_observer_ = observer;
     }
   
-    start(server_address, room_id, peer_name) {
-        this.peer_name = peer_name;
-        this.signaller = new conference_signalling(server_address, room_id, peer_name);
-       
-        this.signaller.start(()=>{
-            this._join_room(peer_name);
-        });
+    start(peer_name, signaller) {
+        this._join_room(peer_name, signaller);
+    
     }
     stop(){
         show_msg("going to send close request");
@@ -47,8 +43,7 @@ class media_soup_conference {
         }));
     }
 
-    _join_room(peer_name) {
-        let sender = this.signaller;
+    _join_room(peer_name, sender) {
         let stream_observer_ = this.stream_observer_;
         sender.send(JSON.stringify({
             'type': "request_room_join"

@@ -70,8 +70,11 @@ function signIn() {
     let server_addr = get_server_url();
     let room_id = get_room_id();
     let peer_name = get_peer_name();
-    media_soup_conference_ = new media_soup_conference(stream_observer);
-    media_soup_conference_.start(server_addr, room_id, peer_name);
+    let signaller = new conference_signalling(server_addr, room_id, peer_name);
+    signaller.start(peer_name=>{
+        media_soup_conference_ = new media_soup_conference(stream_observer);
+        media_soup_conference_.start(peer_name, signaller);
+    });
 }
 
 function connect() {
