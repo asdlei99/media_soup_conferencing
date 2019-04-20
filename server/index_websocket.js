@@ -1,68 +1,61 @@
-var WebSocketServer = require('websocket').server;
-var http = require('http');
-
-const mediasoup = require('mediasoup');
 const config = require('./config');
+const wsServer = require('./websocket_server'); 
+const media_soup_server = require('./media_soup_server');
 
-var httpNodeSerer = http.createServer();
+ class _room_handler{
+   constructor(){
+    this.rooms = new Map();
+   }
 
-var wsServer = new WebSocketServer(
-    {
-        httpServer:httpNodeSerer
-    }
-);
+   is_room_exists(roomId){
+     return this.rooms.has(roomId);
+   }
 
-const port = 8888;
-httpNodeSerer.listen(port);
-// Map of Room instances indexed by roomId.
-const rooms = new Map();
-console.log("listening on port" + port);
+   get_room_handle(roomId){
+     return this.rooms.get(roomId);
+   }
+
+   save_room(roomId, room){
+     this.rooms.set(roomId, room);
+   }
+  
+   delete_room(roomId){
+     this.rooms.delete(roomId);
+   }
+
+ };
+
+let room_handler = new _room_handler();
+
+function handle_room_join_request(peerName, roomId){
+  
+      if (room_handler.is_room_exists(roomId)) {
+        console.log("existing room found for request from "+ peerName);
+        return room_handler.get_room_handle(roomId);
+      } else {
+        console.log("creating new room for "+ peerName)
+        //room = mediaServer.Room(config.mediasoup.mediaCodecs);
+        let room = media_soup_server.create_room(config.mediasoup.mediaCodecs);
+        room_handler.save_room(roomId, room);
+        room.on('close', () => {
+          room_handler.delete_room(roomId);
+        });
+        return room;
+      }
+}
 
 
-wsServer.on('request', function (request) {
-    let source = request.resourceURL.query.source;
-    console.log(request.resourceURL.query);
-    console.log("on connect " + source);
-
-    let room_id = request.resourceURL.query.roomId;
-    let peer_name = request.resourceURL.query.peerName;
-    console.log(room_id, peer_name);
-
-    if (source == "audio_conference") {
-        handle_audio_conference(request);
-    }
-    else {
-        console.log("unspported source received" + source);
-        handle_audio_conference(request);
-        //assert(false, "handle unsupported source");
-    }
-});
-
-function handle_audio_conference(request){
+function handle_conference(request){
     let ext_connection = request.accept(null, request.origin);
     let roomId = request.resourceURL.query.roomId;
     let peerName = request.resourceURL.query.peerName;
     let room = null;
     let mediaPeer = null;
     ext_connection.on('message', function (data) {
-        // let room = null;
-        // // Used for mediaSoup peer
-        // let mediaPeer = null;
-        // const { roomId, peerName } = socket.handshake.query;//todo handle this
         let response = JSON.parse(data.utf8Data);
         if(response.type == "request_room_join"){
-           console.log("request room join received");
-            if (rooms.has(roomId)) {
-              console.log("existing room found for request from "+ peerName);
-              room = rooms.get(roomId);
-            } else {
-              console.log("creating new room for "+ peerName)
-              room = mediaServer.Room(config.mediasoup.mediaCodecs);
-              rooms.set(roomId, room);
-              room.on('close', () => {
-                rooms.delete(roomId);
-              });
-            }
+          room = handle_room_join_request(peerName, roomId);
+
         }
         else if(response.type == 'mediasoup-request'){
            
@@ -98,7 +91,7 @@ function handle_audio_conference(request){
                       // Get the newly created mediasoup Peer
                       mediaPeer = room.getPeerByName(peerName);
           
-                      handleMediaPeer(mediaPeer, ext_connection);
+                      media_soup_server.handleMediaPeer(mediaPeer, ext_connection);
           
                       // Send response back
                       ext_connection.send(JSON.stringify({
@@ -141,18 +134,6 @@ function handle_audio_conference(request){
                   }
               }
         }
-        else if (response.type == "request_sign_in") {
-           // saveClientInfo(request.key, response.user, ext_connection);
-        
-            console.log("message received = " + response);
-           // console.log("sign in request from extension for viewer id = " + respnose.gatewayUniqueId);
-            //respnose.uniqueBoxId;
-            ext_connection.send(JSON.stringify({
-                "type": "response_sign_in",
-                "m": 'joinedsucess',
-                "client": "server",
-            })); //todo: check viewer before sending response sucess
-        }
         else if(response.type == 'request_close'){
           //mediaPeer = room.getPeerByName(peerName);
           console.log('request_close received...');
@@ -174,53 +155,4 @@ function handle_audio_conference(request){
 }
 
 
-
-// MediaSoup server
-const mediaServer = mediasoup.Server({
-    numWorkers: null, // Use as many CPUs as available.
-    logLevel: config.mediasoup.logLevel,
-    logTags: config.mediasoup.logTags,
-    rtcIPv4: config.mediasoup.rtcIPv4,
-    rtcIPv6: config.mediasoup.rtcIPv6,
-    rtcAnnouncedIPv4: config.mediasoup.rtcAnnouncedIPv4,
-    rtcAnnouncedIPv6: config.mediasoup.rtcAnnouncedIPv6,
-    rtcMinPort: config.mediasoup.rtcMinPort,
-    rtcMaxPort: config.mediasoup.rtcMaxPort
-  });
-
-
-  const handleMediaPeer = (mediaPeer,con) => {
-    mediaPeer.on('notify', (notification) => {
-      console.log('New notification for mediaPeer received:', notification);
-      con.send(JSON.stringify({type:'mediasoup-notification', m:notification}));
-    });
-
-    mediaPeer.on('newtransport', (transport) => {
-      console.log('New mediaPeer transport:', transport.direction);
-      transport.on('close', (originator) => {
-        console.log('Transport closed from originator:', originator);
-      });
-    });
-
-    mediaPeer.on('newproducer', (producer) => {
-      console.log('New mediaPeer producer:', producer.kind);
-      producer.on('close', (originator) => {
-        console.log('Producer closed from originator:', originator);
-      });
-    });
-
-    mediaPeer.on('newconsumer', (consumer) => {
-      console.log('New mediaPeer consumer:', consumer.kind);
-      consumer.on('close', (originator) => {
-        console.log('Consumer closed from originator', originator);
-      });
-    });
-
-    // Also handle already existing Consumers.
-    mediaPeer.consumers.forEach((consumer) => {
-      console.log('mediaPeer existing consumer:', consumer.kind);
-      consumer.on('close', (originator) => {
-        console.log('Existing consumer closed from originator', originator);
-      });
-    });
-  }
+wsServer.start(config.server.port, handle_conference);
