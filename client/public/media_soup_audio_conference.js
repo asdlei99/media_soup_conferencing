@@ -129,21 +129,21 @@ class media_soup_conference {
                 show_msg("getting mic and camera");
                 return navigator.mediaDevices.getUserMedia({
                     audio: true,
-                    video: false
+                    video: true
                 });
             })
             .then((stream) => {
                 const audioTrack = stream.getAudioTracks()[0];
-               // const videoTrack = stream.getVideoTracks()[0];
+                const videoTrack = stream.getVideoTracks()[0];
 
                 // Create Producers for audio and video.
                 const audioProducer = room.createProducer(audioTrack);
-               // const videoProducer = room.createProducer(videoTrack);
+                const videoProducer = room.createProducer(videoTrack);
 
                 // Send our audio.
                 audioProducer.send(sendTransport);
                 // Send our video.
-                //videoProducer.send(sendTransport);
+                videoProducer.send(sendTransport);
             })
             .catch((err) => {
                 show_msg("err" + err);
@@ -271,14 +271,14 @@ class media_soup_conference {
                     const stream = new MediaStream();
                     stream.addTrack(track);
 
-                    // if (consumer.kind === 'video') {
-                    //     const video = document.createElement('video');
-                    //     video.setAttribute('style', 'max-width: 400px;');
-                    //     video.setAttribute('playsinline', '');
-                    //     video.srcObject = stream;
-                    //     document.getElementById('container').appendChild(video);
-                    //     video.play();
-                    // }
+                    if (consumer.kind === 'video') {
+                        const video = document.createElement('video');
+                        video.setAttribute('style', 'max-width: 400px;');
+                        video.setAttribute('playsinline', '');
+                        video.srcObject = stream;
+                        document.getElementById('container').appendChild(video);
+                        video.play();
+                    }
                     if (consumer.kind === 'audio') {
                         const audio = document.createElement('audio');
                         audio.srcObject = stream;
