@@ -1,18 +1,5 @@
 'use strict';
 
-
-function show_msg(msg) {
-    const NEW_LINE = '</br>';
-    let time = new Date();
-    msg = time.getMinutes() + ':' + time.getSeconds() + ':' + time.getMilliseconds() + '=' + msg;
-    document.getElementById("debug").innerHTML += msg;
-    document.getElementById("debug").innerHTML += NEW_LINE;
-}
-
-function clearMsg(){
-    document.getElementById("debug").innerHTML = '';
-}
-
 var _id = 0;
 function get_id() {
     _id++;
@@ -38,50 +25,12 @@ function get_req_res(id) {
     return arr;
 }
 
-
-function create_conferencing_url(server_url, room_id, peer_name){
-    //ip:port/?roomId=id?peerName=name;
-    return server_url + "/?roomId="+room_id+"&peerName="+peer_name;
-}
-
-class conference_signalling {
-    constructor(server_address, room_id, peer_name){
-        this.server_address = server_address;
-        this.room_id = room_id;
-        this.peer_name = peer_name;
-    }
-     start(succcess) {
-        let url = create_conferencing_url(this.server_address, 
-            this.room_id, this.peer_name);
-        show_msg("url = "+ url);
-        this.socket = new WebSocket(url);
-
-        this.socket.onopen =  ()=>{
-            show_msg("connect to server success");
-            succcess(this.peer_name);
-        };
-
-        this.socket.onerror = err =>{
-            show_msg("server connection error " + err);
-        };
-        this.socket.onclose = ()=>{
-            show_msg("sever connection closed");
-        };
-
-    }
-
-    send(msg) {
-        this.socket.send(msg);
-    }
-
-    register_callback(callback) {
-        this.socket.onmessage = callback;
-    }
-}
-
-
-
 class media_soup_conference {
+
+    constructor(observer){
+        this.stream_observer_ = observer;
+    }
+  
     start(server_address, room_id, peer_name) {
         this.peer_name = peer_name;
         this.signaller = new conference_signalling(server_address, room_id, peer_name);
@@ -100,6 +49,7 @@ class media_soup_conference {
 
     _join_room(peer_name) {
         let sender = this.signaller;
+        let stream_observer_ = this.stream_observer_;
         sender.send(JSON.stringify({
             'type': "request_room_join"
         }));
@@ -270,21 +220,12 @@ class media_soup_conference {
                     // Attach the track to a MediaStream and play it.
                     const stream = new MediaStream();
                     stream.addTrack(track);
+                    if (stream_observer_)
+                        stream_observer_(stream, consumer.kind, 'receive');
+                    else {
+                        show_msg("should not come here in receive");
+                    }
 
-                    if (consumer.kind === 'video') {
-                        const video = document.createElement('video');
-                        video.setAttribute('style', 'max-width: 400px;');
-                        video.setAttribute('playsinline', '');
-                        video.srcObject = stream;
-                        document.getElementById('container').appendChild(video);
-                        video.play();
-                    }
-                    if (consumer.kind === 'audio') {
-                        const audio = document.createElement('audio');
-                        audio.srcObject = stream;
-                        document.getElementById('container').appendChild(audio);
-                        audio.play();
-                    }
                 });
 
             // Event fired when the Consumer is closed.

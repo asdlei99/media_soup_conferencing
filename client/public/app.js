@@ -1,7 +1,9 @@
-function get_user_name(){
-        let user = document.getElementById("local").value;
-        console.log(user);
-        return user;
+'use strict';
+
+function get_user_name() {
+    let user = document.getElementById("local").value;
+    console.log(user);
+    return user;
 }
 
 function trace(txt, isError) {
@@ -12,6 +14,17 @@ function trace(txt, isError) {
         console.log(txt);
 }
 
+function show_msg(msg) {
+    const NEW_LINE = '</br>';
+    let time = new Date();
+    msg = time.getMinutes() + ':' + time.getSeconds() + ':' + time.getMilliseconds() + '=' + msg;
+    document.getElementById("debug").innerHTML += msg;
+    document.getElementById("debug").innerHTML += NEW_LINE;
+}
+
+function clearMsg() {
+    document.getElementById("debug").innerHTML = '';
+}
 
 function get_server_url() {
     let server = document.getElementById("server").value;
@@ -29,11 +42,35 @@ function get_room_id(){
 
 let media_soup_conference_ = null;
 
+function stream_observer(stream, kind, type){
+    if ('receive' == type) {
+        if (kind == 'video') {
+            show_msg("video recive");
+            const video = document.createElement('video');
+            video.setAttribute('style', 'max-width: 400px;');
+            video.setAttribute('playsinline', '');
+            video.srcObject = stream;
+            document.getElementById('container').appendChild(video);
+            video.play();
+        }
+        else if (kind == 'audio') {
+            show_msg("audio recive");
+            const audio = document.createElement('audio');
+            audio.srcObject = stream;
+            document.getElementById('container').appendChild(audio);
+            audio.play();
+        }
+        else {
+            //todo: it should never come here
+        }
+    }
+}
+
 function signIn() {
     let server_addr = get_server_url();
     let room_id = get_room_id();
     let peer_name = get_peer_name();
-    media_soup_conference_ = new media_soup_conference()
+    media_soup_conference_ = new media_soup_conference(stream_observer);
     media_soup_conference_.start(server_addr, room_id, peer_name);
 }
 
