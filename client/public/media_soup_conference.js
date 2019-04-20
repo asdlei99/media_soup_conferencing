@@ -1,28 +1,40 @@
 'use strict';
 
-var _id = 0;
-function get_id() {
-    _id++;
-    return _id;
-}
+class response_caller{
+    //used to save id, and callback handler for success and response
+//for the local room request, 
+//those request are sent to remote and whatever reponse is received is 
+//success or error callback is called by using id.
 
-var req_res_map = new Map();
+    constructor(){
+        this.res_map = new Map();
+        this.id_ = 0;
+    }
 
-function save_req_res(id, req, error) {
-    if (req_res_map.has(id)) {
-        show_msg("error : id is afeady saved " + id);
+    _get_id(){
+        this.id_++;
+        return this.id_;
     }
-    else {
-        req_res_map.set(id, [req, error]);
-    }
-}
 
-function get_req_res(id) {
-    var arr = req_res_map.get(id);
-    if (req_res_map.delete(id) == false) {
-        show_msg("error: id not found " + id);
+    save_response(success, error){
+        let id = this._get_id();
+        if (this.res_map.has(id)) {
+            show_msg("error : id is afeady saved " + id);
+        }
+        else {
+            this.res_map.set(id, [success, error]);
+        }
+        return id;
     }
-    return arr;
+
+    process(id, msg, is_success){
+        let arr = this.res_map.get(id);
+        if (this.res_map.delete(id) == false) {
+            show_msg("error: id not found " + id);
+        }
+        let callback = (is_success?arr[0]:arr[1]);
+        callback(msg);
+    }
 }
 
 class media_soup_conference {
@@ -32,9 +44,10 @@ class media_soup_conference {
     }
   
     start(peer_name, signaller) {
-        this._join_room(peer_name, signaller);
+        this.request_room_join(peer_name, signaller);
     
     }
+
     stop(){
         show_msg("going to send close request");
         this.signaller.send(
@@ -43,12 +56,30 @@ class media_soup_conference {
         }));
     }
 
-    _join_room(peer_name, sender) {
-        let stream_observer_ = this.stream_observer_;
+    request_room_join(peerName, sender){
+        let self = this;
+        sender.register_callback(evt=>{
+            let jmsg = JSON.parse(evt.data);
+            if(jmsg.type == 'room_join_response'){
+                if(jmsg.status == 'okay'){
+                    self._join_room(peerName, sender);
+                }
+                else{
+                    show_msg("error in room join response");
+                }
+            }
+            else{
+                show_msg("unsupported message")
+            }
+        });
         sender.send(JSON.stringify({
             'type': "request_room_join"
         }));
+    }
 
+    _join_room(peer_name, sender) {
+        let stream_observer_ = this.stream_observer_;
+        let req_res = new response_caller();
         // Create a local Room instance associated to the remote Room.
         const room = new mediasoupClient.Room();
         // Transport for sending our media.
@@ -104,8 +135,8 @@ class media_soup_conference {
         // Event fired by local room
         room.on('request', (request, callback, errback) => {
             show_msg('REQUEST:' + request);
-            let id = get_id();
-            save_req_res(id, callback, errback);
+            let id = req_res.save_response(callback, errback);
+           // save_req_res(id, callback, errback);
             sender.send(
                 JSON.stringify({
                     'type': 'mediasoup-request',
@@ -131,62 +162,18 @@ class media_soup_conference {
                 show_msg('New notification came from server:' + jmsg.m);
                 room.receiveNotification(jmsg.m);
             }
-            else if (jmsg.type == "queryRoomResponse") {
-                show_msg('queryRoomResponse: ' + jmsg.m);
-                let req_resp = get_req_res(jmsg.id);
-                if (req_resp != undefined) {
-                    req_resp[0](jmsg.m);
-                }
+            else if (jmsg.type == "queryRoomResponse" 
+            ||jmsg.type == "join_response" || jmsg.type == "response") {
+                show_msg(jmsg.type + ' ' + jmsg.m);
+                req_res.process(jmsg.id, jmsg.m, true);
             }
-            else if (jmsg.type == "queryRoomResponseError") {
-                show_msg('query room response error: ' + jmsg.m);
-                let req_resp = get_req_res(jmsg.id);
-                if (req_resp != undefined) {
-                    req_resp[1](jmsg.m);
-                }
-                //room_error_callback(jmsg.m);
+            else if (jmsg.type == "queryRoomResponseError" 
+            || jmsg.type == "join_response_error" 
+            || jmsg.type == "response_error") {
+                show_msg(jmsg.type + ' ' + jmsg.m);
+                req_res.process(jmsg.id, jmsg.m, false);
             }
-            else if (jmsg.type == "join_response") {
-                show_msg('join response: ' + jmsg.m);
-                let req_resp = get_req_res(jmsg.id);
-                if (req_resp != undefined) {
-                    req_resp[0](jmsg.m);
-                }
-            }
-            else if (jmsg.type == "join_response_error") {
-                show_msg('join response error: ' + jmsg.m);
-                try {
-                    let req_resp = get_req_res(jmsg.id);
-                    if (req_resp != undefined) {
-                        req_resp[1](jmsg.m);
-                    }
-                }
-                catch (err) {
-                    show_msg("join response error exception " + err);
-                }
-
-            }
-            else if (jmsg.type == "response") {
-                show_msg('response : ' + jmsg.m);
-                let req_resp = get_req_res(jmsg.id);
-                if (req_resp != undefined) {
-                    req_resp[0](jmsg.m);
-                }
-            }
-            else if (jmsg.type == "response_error") {
-                show_msg('response error : ' + jmsg.m);
-
-                try {
-                    let req_resp = get_req_res(jmsg.id);
-                    if (req_resp != undefined) {
-                        req_resp[1](jmsg.m);
-                    }
-                }
-                catch (err) {
-                    show_msg('response  error exception : ' + err);
-                }
-
-            }
+            
         });
 
         function handlePeer(peer) {

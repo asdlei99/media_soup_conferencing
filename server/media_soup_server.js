@@ -66,21 +66,26 @@ class _room_handler{
  
  let room_handler = new _room_handler();
 
- function handle_room_join_request(peerName, roomId){
+ function handle_room_join_request(peer){
+   let roomId = peer.get_roomId();
+
 
     if (room_handler.is_room_exists(roomId)) {
-      console.log("existing room found for request from "+ peerName);
-      return room_handler.get_room_handle(roomId);
+      console.log("existing room found for roomId " + roomId);
+      //room_handler.get_room_handle(roomId);
     } else {
-      console.log("creating new room for "+ peerName)
+      console.log("creating new room for "+ roomId)
       //room = mediaServer.Room(config.mediasoup.mediaCodecs);
       let room = create_room(config.mediasoup.mediaCodecs);
       room_handler.save_room(roomId, room);
       room.on('close', () => {
         room_handler.delete_room(roomId);
       });
-      return room;
+      
     }
+    let signaller = peer.get_conection();
+    signaller.send(JSON.stringify({'type':"room_join_response", 
+                            status:'okay'}));
 }
 
  module.exports.handle_room_join_request = handle_room_join_request;

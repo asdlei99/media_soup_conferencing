@@ -12,7 +12,7 @@ function handle_conference(request){
     ext_connection.on('message', function (data) {
         let response = JSON.parse(data.utf8Data);
         if(response.type == "request_room_join"){
-          room = media_soup_server.handle_room_join_request(peerName, roomId);
+           media_soup_server.handle_room_join_request(peer);
         }
         else if(response.type == 'mediasoup-request'){
          
