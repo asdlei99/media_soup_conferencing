@@ -162,14 +162,11 @@ class media_soup_conference {
                 show_msg('New notification came from server:' + jmsg.m);
                 room.receiveNotification(jmsg.m);
             }
-            else if (jmsg.type == "queryRoomResponse" 
-            ||jmsg.type == "join_response" || jmsg.type == "response") {
+            else if (jmsg.type == "response") {
                 show_msg(jmsg.type + ' ' + jmsg.m);
                 req_res.process(jmsg.id, jmsg.m, true);
             }
-            else if (jmsg.type == "queryRoomResponseError" 
-            || jmsg.type == "join_response_error" 
-            || jmsg.type == "response_error") {
+            else if(jmsg.type == "response_error") {
                 show_msg(jmsg.type + ' ' + jmsg.m);
                 req_res.process(jmsg.id, jmsg.m, false);
             }

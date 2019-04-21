@@ -83,6 +83,7 @@ class _room_handler{
       });
       
     }
+   
     let signaller = peer.get_conection();
     signaller.send(JSON.stringify({'type':"room_join_response", 
                             status:'okay'}));
@@ -138,9 +139,39 @@ function process_room_join(roomId, peerName, signaller){
  module.exports.process_room_join = process_room_join;
 
  
- function check_peer_media(mediaPeer, request, id, signaller){
-    if(mediaPeer == null) return;
-    if (mediaPeer) {
+  function handle_media_soup_request(peer, request, what, id){
+    let roomId =  peer.get_roomId();
+    let signaller = peer.get_conection();
+   let room = room_handler.get_room_handle(roomId);
+   let peerName = peer.get_name();
+   let target = request.target;
+    console.log(request, what);
+    if(target == "room"){
+      room.receiveRequest(request)
+            .then((response) => {
+              if(what =='join'){
+                let mediaPeer = process_room_join(roomId, peerName,signaller);
+                peer.save_peer(mediaPeer);
+              }
+                signaller.send(JSON.stringify(
+                    {'type':"response",
+                      'id':id,
+                      'm':response
+                    }));
+            })
+            .catch((error) =>{
+                console.log("handle this error", error);
+                signaller.send(JSON.stringify(
+                    {'type':"response_error",
+                      'id':id,
+                      'm':error.toString()
+                    }));
+            });
+          
+    }
+    else if(target == "peer"){
+      let mediaPeer = peer.get_peer();
+      if(mediaPeer){
         mediaPeer.receiveRequest(request)
           .then((response) =>{ 
             signaller.send(JSON.stringify({
@@ -148,7 +179,6 @@ function process_room_join(roomId, peerName, signaller){
                 'id':id,
                 'm':response
             }));
-              //cb(null, response)
           })
           .catch((error) => {
               console.log("error", error);
@@ -157,63 +187,15 @@ function process_room_join(roomId, peerName, signaller){
                 'id':id,
                 m:error.toString()
             }));
-           //cb(error.toString())
           });
       }
- }
-  
-  function handle_media_soup_request(peer, request, what, id){
-    let roomId =  peer.get_roomId();
-    let signaller = peer.get_conection();
-   let room = room_handler.get_room_handle(roomId);
-   let peerName = peer.get_name();
-    console.log(request, what);
-    switch (what) {
-  
-        case 'queryRoom':
-          room.receiveRequest(request)
-            .then((response) => {
-                signaller.send(JSON.stringify(
-                    {'type':"queryRoomResponse",
-                      'id':id,
-                      'm':response
-                    }));
-            })
-            .catch((error) =>{
-                console.log("handle this error", error);
-                signaller.send(JSON.stringify(
-                    {'type':"queryRoomResponseError",
-                      'id':id,
-                      'm':error.toString()
-                    }));
-            });
-          break;
-  
-        case 'join':
-          room.receiveRequest(request)
-            .then((response) => {
-                let mediaPeer = process_room_join(roomId, peerName,signaller);
-                peer.save_peer(mediaPeer);
-                signaller.send(JSON.stringify({
-                    'type':"join_response",
-                    'id':id,
-                    m:response
-                }));
-
-            })
-            .catch((error) => {
-                console.log("error occur ", error);//handle this case
-                signaller.send(JSON.stringify(
-                    {'type':"join_response_error",
-                      'id':id,
-                      'm':error.toString()
-                    }));
-            });
-          break;
-  
-        default:
-        check_peer_media(peer.get_peer(), request, id, signaller);
+      else{
+        console.error("why comming here = ", request);
       }
+    }
+    else{
+      console.error("it should not come here", target);
+    }
   }
 
   module.exports.handle_media_soup_request = handle_media_soup_request;
