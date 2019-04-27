@@ -195,6 +195,7 @@ class media_soup_conference {
         function handleConsumer(consumer) {
             // Receive the media over our receiving Transport.
             show_msg("handleConsumer called");
+            
             consumer.receive(recvTransport)
                 .then((track) => {
                     show_msg('Receiving a new remote MediaStreamTrack:' + consumer.kind);
@@ -202,7 +203,7 @@ class media_soup_conference {
                     const stream = new MediaStream();
                     stream.addTrack(track);
                     if (stream_observer_)
-                        stream_observer_(stream, consumer.kind, 'receive');
+                        stream_observer_('receive', consumer.id, consumer.kind, stream);
                     else {
                         show_msg("should not come here in receive");
                     }
@@ -212,6 +213,7 @@ class media_soup_conference {
             // Event fired when the Consumer is closed.
             consumer.on('close', () => {
                 show_msg('Consumer closed');
+                stream_observer_('close', consumer.id, consumer.kind);
             });
         }
 

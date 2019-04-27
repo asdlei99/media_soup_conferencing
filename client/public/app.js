@@ -42,10 +42,10 @@ function get_room_id(){
 
 let media_soup_conference_ = null;
 
-function stream_observer(stream, kind, type){
+function stream_observer(type, id, kind, stream){
     if ('receive' == type) {
         if (kind == 'video') {
-            show_msg("video recive");
+            show_msg("video recive "+ id);
             const video = document.createElement('video');
             video.setAttribute('style', 'max-width: 400px;');
             video.setAttribute('playsinline', '');
@@ -54,7 +54,7 @@ function stream_observer(stream, kind, type){
             video.play();
         }
         else if (kind == 'audio') {
-            show_msg("audio recive");
+            show_msg("audio recive "+id);
             const audio = document.createElement('audio');
             audio.srcObject = stream;
             document.getElementById('container').appendChild(audio);
@@ -62,7 +62,11 @@ function stream_observer(stream, kind, type){
         }
         else {
             //todo: it should never come here
+            
         }
+    }
+    else if('close' == type){
+        show_msg("handel close message for consumer id " + id + "kind = "+kind);
     }
 }
 

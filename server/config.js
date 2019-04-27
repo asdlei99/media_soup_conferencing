@@ -17,7 +17,8 @@ module.exports = {
     ],
     rtcIPv4: true,
     rtcIPv6: false,
-    rtcAnnouncedIPv4: "52.14.119.40",
+   // rtcAnnouncedIPv4: "52.14.119.40", todo: enable this for aws machine
+    rtcAnnouncedIPv4: null,
     rtcAnnouncedIPv6: null,
     rtcMinPort: 40000,
     rtcMaxPort: 49999,
