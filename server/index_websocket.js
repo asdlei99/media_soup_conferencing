@@ -29,8 +29,15 @@ function handle_conference(request){
         else if(response.type == 'mediasoup-notification'){
           media_soup_server.on_notification(response.m, peer);
         }
+        else{
+          console.error("type is not ", response);
+        }
      }
     );
+
+    ext_connection.on('close', ()=>{
+      console.error(" on close ", peerName, roomId);
+    });
 }
 
 wsServer.start(config.server.port, handle_conference);

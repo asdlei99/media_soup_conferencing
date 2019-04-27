@@ -44,12 +44,14 @@ class media_soup_conference {
     }
   
     start(peer_name, signaller) {
+        this.signaller = signaller;
         this.request_room_join(peer_name, signaller);
     
     }
 
     stop(){
         show_msg("going to send close request");
+        
         this.signaller.send(
         JSON.stringify({
             'type': 'request_close'

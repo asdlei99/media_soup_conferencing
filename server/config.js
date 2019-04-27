@@ -16,11 +16,13 @@ module.exports = {
       'rtx'
     ],
     rtcIPv4: true,
-    rtcIPv6: true,
-    rtcAnnouncedIPv4: null,
+    rtcIPv6: false,
+    rtcAnnouncedIPv4: "52.14.119.40",
     rtcAnnouncedIPv6: null,
     rtcMinPort: 40000,
     rtcMaxPort: 49999,
+    dtlsCertFile:null,
+    dtlsKeyFile:null,
     // mediasoup Room codecs.
     mediaCodecs: [
       {

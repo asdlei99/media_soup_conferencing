@@ -9,18 +9,15 @@ const mediaServer = mediasoup.Server({
     logTags: config.mediasoup.logTags,
     rtcIPv4: config.mediasoup.rtcIPv4,
     rtcIPv6: config.mediasoup.rtcIPv6,
-    rtcAnnouncedIPv4: config.mediasoup.rtcAnnouncedIPv4,
+   rtcAnnouncedIPv4: config.mediasoup.rtcAnnouncedIPv4,
     rtcAnnouncedIPv6: config.mediasoup.rtcAnnouncedIPv6,
     rtcMinPort: config.mediasoup.rtcMinPort,
     rtcMaxPort: config.mediasoup.rtcMaxPort
+/*
+    dtlsCertificateFile:config.mediasoup.dtlsCertFile,
+    dtlsPrivateKeyFile:config.mediasoup.dtlsKeyFile
+    */
   });
-
-
-  function create_room(codecs){
-      return mediaServer.Room(codecs);
-  }
-
-  module.exports.create_room = create_room;
 
 class _room_handler{
     constructor(){
@@ -76,7 +73,7 @@ class _room_handler{
     } else {
       console.log("creating new room for "+ roomId)
       //room = mediaServer.Room(config.mediasoup.mediaCodecs);
-      let room = create_room(config.mediasoup.mediaCodecs);
+      let room = mediaServer.Room(config.mediasoup.mediaCodecs);
       room_handler.save_room(roomId, room);
       room.on('close', () => {
         room_handler.delete_room(roomId);
@@ -88,8 +85,6 @@ class _room_handler{
     signaller.send(JSON.stringify({'type':"room_join_response", 
                             status:'okay'}));
 }
-
- module.exports.handle_room_join_request = handle_room_join_request;
 
 function process_room_join(roomId, peerName, signaller){
     if(room_handler.is_room_exists(roomId)){
@@ -135,9 +130,6 @@ function process_room_join(roomId, peerName, signaller){
         //todo: it should not return hre.
     }
  };
-
- module.exports.process_room_join = process_room_join;
-
  
   function handle_media_soup_request(peer, request, what, id){
     let roomId =  peer.get_roomId();
@@ -198,7 +190,7 @@ function process_room_join(roomId, peerName, signaller){
     }
   }
 
-  module.exports.handle_media_soup_request = handle_media_soup_request;
+ 
 
   function handle_close(peer){
     console.log('request_close received...');
@@ -206,9 +198,8 @@ function process_room_join(roomId, peerName, signaller){
     let mediaPeer = peer.get_peer();
     if(mediaPeer != null)
       mediaPeer.close();
+    mediaPeer = null;
   }
-
-  module.exports.handle_close = handle_close;
 
   function handle_notification(msg, peer){
     console.debug('Got notification from client peer', msg);
@@ -227,3 +218,9 @@ function process_room_join(roomId, peerName, signaller){
     let peer = new _peer(key, peerName, roomId, con);
     return peer;
   }
+
+  module.exports.handle_room_join_request = handle_room_join_request;
+
+ module.exports.handle_media_soup_request = handle_media_soup_request;
+
+ module.exports.handle_close = handle_close;
