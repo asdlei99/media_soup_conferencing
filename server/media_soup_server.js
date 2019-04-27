@@ -59,6 +59,12 @@ class _room_handler{
       get_name(){return this.name_;}
       get_roomId(){return this.roomId_;}
       get_conection(){return this.con_;}
+      close(){
+        this.id_ = null;
+        this.peer_= null;
+        this.name_ = null;
+        this.roomId_ = null;
+      }
   }
  
  let room_handler = new _room_handler();
@@ -199,7 +205,10 @@ function process_room_join(roomId, peerName, signaller){
     if(mediaPeer != null)
       mediaPeer.close();
     mediaPeer = null;
+    peer.close();
+    peer = null;
   }
+
 
   function handle_notification(msg, peer){
     console.debug('Got notification from client peer', msg);

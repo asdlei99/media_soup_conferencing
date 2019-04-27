@@ -37,6 +37,8 @@ function handle_conference(request){
 
     ext_connection.on('close', ()=>{
       console.error(" on close ", peerName, roomId);
+      media_soup_server.handle_close(peer);
+
     });
 }
 

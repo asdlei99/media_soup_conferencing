@@ -136,7 +136,7 @@ class media_soup_conference {
 
         // Event fired by local room
         room.on('request', (request, callback, errback) => {
-            show_msg('REQUEST:' + request);
+            show_msg('REQUEST:' + JSON.stringify(request));
             let id = req_res.save_response(callback, errback);
            // save_req_res(id, callback, errback);
             sender.send(
@@ -150,7 +150,7 @@ class media_soup_conference {
 
         // Be ready to send mediaSoup client notifications to our remote mediaSoup Peer
         room.on('notify', (notification) => {
-            show_msg('New notification from local room:' + notification);
+            show_msg('New notification from local room:' + JSON.stringify(notification));
             sender.send(JSON.stringify({
                 "type": 'mediasoup-notification',
                 "m": notification
