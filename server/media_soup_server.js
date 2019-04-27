@@ -25,19 +25,26 @@ class _room_handler{
     }
  
     is_room_exists(roomId){
-      return this.rooms.has(roomId);
+      return this.rooms.has(Number(roomId));
     }
  
     get_room_handle(roomId){
-      return this.rooms.get(roomId);
+      return this.rooms.get(Number(roomId));
     }
 
     save_room(roomId, room){
-      this.rooms.set(roomId, room);
+      this.rooms.set(Number(roomId), room);
     }
 
+    print_rooms(){
+      console.log("following rooms id available");
+      for (var [key, value] of this.rooms) {
+        console.log(key);
+      }
+    }
     delete_room(roomId){
-      this.rooms.delete(roomId);
+      const r =  this.rooms.delete(Number(roomId));
+      return r;
     }
  
   };
@@ -69,27 +76,35 @@ class _room_handler{
  
  let room_handler = new _room_handler();
 
+ function create_room(roomName){
+//todo: manage roomName with roomId so that searching of room can be possible
+  const room = mediaServer.Room(config.mediasoup.mediaCodecs);
+  const id = room.id;
+  room_handler.save_room(id, room);
+  room.on('close', ()=>{
+    room_handler.delete_room(id);
+  });
+  return id;
+ }
+
+ function delete_room(roomId){
+  return room_handler.delete_room(roomId);
+ }
+
  function handle_room_join_request(peer){
    let roomId = peer.get_roomId();
 
-
+   let signaller = peer.get_conection();
     if (room_handler.is_room_exists(roomId)) {
-      console.log("existing room found for roomId " + roomId);
-      //room_handler.get_room_handle(roomId);
-    } else {
-      console.log("creating new room for "+ roomId)
-      //room = mediaServer.Room(config.mediasoup.mediaCodecs);
-      let room = mediaServer.Room(config.mediasoup.mediaCodecs);
-      room_handler.save_room(roomId, room);
-      room.on('close', () => {
-        room_handler.delete_room(roomId);
-      });
       
-    }
-   
-    let signaller = peer.get_conection();
-    signaller.send(JSON.stringify({'type':"room_join_response", 
+      signaller.send(JSON.stringify({'type':"room_join_response", 
                             status:'okay'}));
+    } else {
+      console.error("room not found with id ", roomId);
+      room_handler.print_rooms();
+      signaller.send(JSON.stringify({'type':"room_join_response", 
+              status:'error', m:"room not exists"}));
+    }
 }
 
 function process_room_join(roomId, peerName, signaller){
@@ -233,3 +248,7 @@ function process_room_join(roomId, peerName, signaller){
  module.exports.handle_media_soup_request = handle_media_soup_request;
 
  module.exports.handle_close = handle_close;
+
+ module.exports.create_room = create_room;
+
+ module.exports.delete_room = delete_room;

@@ -95,6 +95,52 @@ function connect() {
     }
 }
 
+function parse_room_manager_msg(jmsg){
+    if(jmsg.type == 'room_open_response'){
+        if(jmsg.status == "success"){
+            show_msg("room creation success");
+            document.getElementById("roomId").value = jmsg.id;
+        }
+    }
+    else if(jmsg.type == 'room_close_response'){
+        show_msg("room close response = " + jmsg.status);
+    
+    }
+    else{
+        show_msg("this is not expeced "+ JSON.stringify(jmsg));
+    }
+}
+
+function send_room_manager_msg(serverIp, msg){
+    let socket = new WebSocket("ws://" + serverIp);
+
+    socket.onopen = () => {
+        show_msg("connect to room server success");
+        socket.send(msg);
+    };
+
+    socket.onerror = err => {
+        show_msg("server connection error " + err);
+    };
+    socket.onclose = () => {
+        show_msg("sever connection closed");
+    };
+    socket.onmessage = evt=>{
+        let jmsg = JSON.parse(evt.data);
+        parse_room_manager_msg(jmsg);
+        socket.close();
+        socket = null;
+    }
+}
+
+function create_room(serverIp, roomName){
+    send_room_manager_msg(serverIp, JSON.stringify({type:"request_room_open", name:roomName}));
+}
+
+function delete_room(serverIP, roomId){
+    send_room_manager_msg(serverIP, JSON.stringify({type:'request_room_close', id:roomId}));
+}
+
 document.querySelector('#ServerConnect').addEventListener('click', function (e) {
 
     connect();
@@ -116,3 +162,41 @@ document.querySelector('#stop').addEventListener('click', function (e) {
     //audio_conf_handler = null;
 });
 
+
+
+document.querySelector('#roomCreate').addEventListener('click', function (e) {
+    const roomManagerServer = document.getElementById('roomManager').value;
+    if(roomManagerServer.length == 0){
+        console.error("put server address");
+        document.getElementById('roomManager').focus();
+        return;
+    }
+    const roomName = document.getElementById("roomName").value;
+    if(roomName.length == 0) {
+        console.error("put room name");
+        document.getElementById("roomName").focus();
+    }
+    else{
+        create_room(roomManagerServer, roomName);
+    }
+   
+});
+
+document.querySelector('#deleteRoom').addEventListener('click', function (e) {
+    const roomManagerServer = document.getElementById('roomManager').value;
+    if(roomManagerServer.length == 0){
+        console.error("put server address");
+        document.getElementById('roomManager').focus();
+        return;
+    }
+    const roomId = document.getElementById("roomId").value;
+    if(roomId.length == 0) {
+        console.error("no room id");
+        document.getElementById("roomId").focus();
+        return;
+    }
+    else{
+        delete_room(roomManagerServer, roomId);
+    }
+   
+});
