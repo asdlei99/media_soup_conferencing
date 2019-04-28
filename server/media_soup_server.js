@@ -29,11 +29,11 @@ class _room_handler{
     }
  
     get_room_handle(roomId){
-      return this.rooms.get(Number(roomId));
+      return this.rooms.get(Number(roomId)).room;
     }
 
-    save_room(roomId, room){
-      this.rooms.set(Number(roomId), room);
+    save_room(roomId, room, name){
+      this.rooms.set(Number(roomId), { 'room':room, 'name':name});
     }
 
     print_rooms(){
@@ -45,6 +45,15 @@ class _room_handler{
     delete_room(roomId){
       const r =  this.rooms.delete(Number(roomId));
       return r;
+    }
+    
+    //return {id:id, name:}
+    get_rooms_info(){
+      let arr = new Array();
+      for(let [key, value] of this.rooms){
+          arr.push({'id':key, 'name':value.name});
+      }
+      return arr;
     }
  
   };
@@ -77,10 +86,9 @@ class _room_handler{
  let room_handler = new _room_handler();
 
  function create_room(roomName){
-//todo: manage roomName with roomId so that searching of room can be possible
   const room = mediaServer.Room(config.mediasoup.mediaCodecs);
   const id = room.id;
-  room_handler.save_room(id, room);
+  room_handler.save_room(id, room, roomName);
   room.on('close', ()=>{
     room_handler.delete_room(id);
   });
@@ -252,3 +260,5 @@ function process_room_join(roomId, peerName, signaller){
  module.exports.create_room = create_room;
 
  module.exports.delete_room = delete_room;
+
+ module.exports.get_rooms_info = ()=>{ return room_handler.get_rooms_info();};

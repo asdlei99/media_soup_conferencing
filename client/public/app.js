@@ -106,6 +106,13 @@ function parse_room_manager_msg(jmsg){
         show_msg("room close response = " + jmsg.status);
     
     }
+    else if(jmsg.type == "response_room_info"){
+
+        show_msg("room info rooms count = " + jmsg.count);
+        show_msg("rooms id ");
+        jmsg.ids.forEach(show_msg);
+        jmsg.names.forEach(show_msg);
+    }
     else{
         show_msg("this is not expeced "+ JSON.stringify(jmsg));
     }
@@ -200,3 +207,14 @@ document.querySelector('#deleteRoom').addEventListener('click', function (e) {
     }
    
 });
+
+document.querySelector('#getRoomsInfo').addEventListener('click', function (e) {
+    const roomManagerServer = document.getElementById('roomManager').value;
+    if(roomManagerServer.length == 0){
+        console.error("put server address");
+        document.getElementById('roomManager').focus();
+        return;
+    }
+    send_room_manager_msg(roomManagerServer, JSON.stringify({type:"request_rooms_info"}));
+});
+

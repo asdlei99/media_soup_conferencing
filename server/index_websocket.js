@@ -74,6 +74,29 @@ function handle_room_managing_request(request){
         )
       );
     }
+    else if(response.type == "request_rooms_info"){
+      const rooms = media_soup_server.get_rooms_info();
+      console.log("request room info received ", rooms.length);
+      let ids = new Array();
+      let names = new Array();
+
+      rooms.every(obj=>{
+        ids.push(obj.id);
+        names.push(obj.name);
+        console.log(obj.id, obj.name);
+      });
+      let m = JSON.stringify({
+        type:"response_room_info",
+        count:rooms.length,
+        'ids':ids,
+        'names':names
+        
+      });
+      ext_connection.send(m);
+      //send back this info to user
+      ext_connection.close();
+      ext_connection = null;
+    }
     else{
       //todo: should not come here
       console.error("should not come here, it is an error");
