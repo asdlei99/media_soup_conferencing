@@ -1,23 +1,105 @@
 const mediasoup = require('mediasoup');
 const config = require('./config');
 
+//global variable
+let worker;
+let mediasoupRouter;
+let producerTransport;
+let producer;
+let consumerTransport;
+let consumer;
 
-// // MediaSoup server
-const mediaServer = mediasoup.Server({
-    numWorkers: null, // Use as many CPUs as available.
-    logLevel: config.mediasoup.logLevel,
-    logTags: config.mediasoup.logTags,
-    rtcIPv4: config.mediasoup.rtcIPv4,
-    rtcIPv6: config.mediasoup.rtcIPv6,
-   rtcAnnouncedIPv4: config.mediasoup.rtcAnnouncedIPv4,
-    rtcAnnouncedIPv6: config.mediasoup.rtcAnnouncedIPv6,
-    rtcMinPort: config.mediasoup.rtcMinPort,
-    rtcMaxPort: config.mediasoup.rtcMaxPort
-/*
-    dtlsCertificateFile:config.mediasoup.dtlsCertFile,
-    dtlsPrivateKeyFile:config.mediasoup.dtlsKeyFile
-    */
+  (async () => {
+    try {
+      await runMediasoupWorker();
+    } catch (err) {
+      console.error(err);
+    }
+  })();
+
+  async function runMediasoupWorker() {
+
+  worker = await mediasoup.createWorker({
+    logLevel: config.mediasoup.worker.logLevel,
+    logTags: config.mediasoup.worker.logTags,
+    rtcMinPort: config.mediasoup.worker.rtcMinPort,
+    rtcMaxPort: config.mediasoup.worker.rtcMaxPort,
   });
+
+  worker.on('died', () => {
+    console.error('mediasoup Worker died, exiting in 2 seconds... [pid:%d]', worker.pid);
+    setTimeout(() => process.exit(1), 2000);
+  });
+  const mediaCodecs = config.mediasoup.router.mediaCodecs;
+  mediasoupRouter = await worker.createRouter({ mediaCodecs });
+}
+
+async function createWebRtcTransport() {
+  const {
+    maxIncomingBitrate,
+    initialAvailableOutgoingBitrate
+  } = config.mediasoup.webRtcTransport;
+
+  const transport = await mediasoupRouter.createWebRtcTransport({
+    listenIps: config.mediasoup.webRtcTransport.listenIps,
+    enableUdp: true,
+    enableTcp: true,
+    preferUdp: true,
+    initialAvailableOutgoingBitrate,
+  });
+  if (maxIncomingBitrate) {
+    try {
+      await transport.setMaxIncomingBitrate(maxIncomingBitrate);
+    } catch (error) {
+    }
+  }
+  return {
+    transport,
+    params: {
+      id: transport.id,
+      iceParameters: transport.iceParameters,
+      iceCandidates: transport.iceCandidates,
+      dtlsParameters: transport.dtlsParameters
+    },
+  };
+}
+
+async function createConsumer(producer, rtpCapabilities) {
+  if (!mediasoupRouter.canConsume(
+    {
+      producerId: producer.id,
+      rtpCapabilities,
+    })
+  ) {
+    console.error('can not consume');
+    return;
+  }
+  try {
+    console.log("going to create consumer");
+    consumer = await consumerTransport.consume({
+      producerId: producer.id,
+      rtpCapabilities,
+      paused: producer.kind === 'video',
+    });
+  } catch (error) {
+    console.error('consume failed', error);
+    return;
+  }
+
+  // if (consumer.type === 'simulcast') {
+  //   await consumer.setPreferredLayers({ spatialLayer: 2, temporalLayer: 2 });
+  // }
+
+  return {
+    producerId: producer.id,
+    id: consumer.id,
+    kind: consumer.kind,
+    rtpParameters: consumer.rtpParameters,
+    type: consumer.type,
+    producerPaused: consumer.producerPaused
+  };
+}
+
 
 class _room_handler{
     constructor(){
@@ -86,10 +168,9 @@ class _room_handler{
  let room_handler = new _room_handler();
 
  function create_room(roomName){
-  const room = mediaServer.Room(config.mediasoup.mediaCodecs);
-  const id = room.id;
-  room_handler.save_room(id, room, roomName);
-  room.on('close', ()=>{
+  const id = mediasoupRouter.id;
+  room_handler.save_room(id, mediasoupRouter, roomName);
+  mediasoupRouter.observer.on('close', ()=>{
     room_handler.delete_room(id);
   });
   return id;
@@ -115,113 +196,7 @@ class _room_handler{
     }
 }
 
-function process_room_join(roomId, peerName, signaller){
-    if(room_handler.is_room_exists(roomId)){
-        let room = room_handler.get_room_handle(roomId);
-        let mediaPeer = room.getPeerByName(peerName); //todo: correct this
-
-        mediaPeer.on('notify', (notification) => {
-            console.log('New notification for mediaPeer received:', notification);
-            signaller.send(JSON.stringify({type:'mediasoup-notification', m:notification}));
-          });
-      
-          mediaPeer.on('newtransport', (transport) => {
-            console.log('New mediaPeer transport:', transport.direction);
-            transport.on('close', (originator) => {
-              console.log('Transport closed from originator:', originator);
-            });
-          });
-      
-          mediaPeer.on('newproducer', (producer) => {
-            console.log('New mediaPeer producer:', producer.kind);
-            producer.on('close', (originator) => {
-              console.log('Producer closed from originator:', originator);
-            });
-          });
-      
-          mediaPeer.on('newconsumer', (consumer) => {
-            console.log('New mediaPeer consumer:', consumer.kind);
-            consumer.on('close', (originator) => {
-              console.log('Consumer closed from originator', originator);
-            });
-          });
-      
-          // Also handle already existing Consumers.
-          mediaPeer.consumers.forEach((consumer) => {
-            console.log('mediaPeer existing consumer:', consumer.kind);
-            consumer.on('close', (originator) => {
-              console.log('Existing consumer closed from originator', originator);
-            });
-          });
-          return mediaPeer;
-    }
-    else{
-        //todo: it should not return hre.
-    }
- };
- 
-  function handle_media_soup_request(peer, request, what, id){
-    let roomId =  peer.get_roomId();
-    let signaller = peer.get_conection();
-   let room = room_handler.get_room_handle(roomId);
-   let peerName = peer.get_name();
-   let target = request.target;
-    console.log(request, what);
-    if(target == "room"){
-      room.receiveRequest(request)
-            .then((response) => {
-              if(what =='join'){
-                let mediaPeer = process_room_join(roomId, peerName,signaller);
-                peer.save_peer(mediaPeer);
-              }
-                signaller.send(JSON.stringify(
-                    {'type':"response",
-                      'id':id,
-                      'm':response
-                    }));
-            })
-            .catch((error) =>{
-                console.log("handle this error", error);
-                signaller.send(JSON.stringify(
-                    {'type':"response_error",
-                      'id':id,
-                      'm':error.toString()
-                    }));
-            });
-          
-    }
-    else if(target == "peer"){
-      let mediaPeer = peer.get_peer();
-      if(mediaPeer){
-        mediaPeer.receiveRequest(request)
-          .then((response) =>{ 
-            signaller.send(JSON.stringify({
-                'type':'response',
-                'id':id,
-                'm':response
-            }));
-          })
-          .catch((error) => {
-              console.log("error", error);
-              signaller.send(JSON.stringify({
-                'type':"response_error",
-                'id':id,
-                m:error.toString()
-            }));
-          });
-      }
-      else{
-        console.error("why comming here = ", request);
-      }
-    }
-    else{
-      console.error("it should not come here", target);
-    }
-  }
-
- 
-
-  function handle_close(peer){
+function handle_close(peer){
     console.log('request_close received...');
 
     let mediaPeer = peer.get_peer();
@@ -233,19 +208,6 @@ function process_room_join(roomId, peerName, signaller){
   }
 
 
-  function handle_notification(msg, peer){
-    console.debug('Got notification from client peer', msg);
-    let mediaPeer = peer.get_peer();
-    if (!mediaPeer) {
-      console.error('Cannot handle mediaSoup notification, no mediaSoup Peer');
-      return;
-    }
-    
-    mediaPeer.receiveNotification(msg);
-  }
-
-  module.exports.on_notification = handle_notification;
-
   module.exports.save_peer = (key, peerName, roomId, con)=>{
     let peer = new _peer(key, peerName, roomId, con);
     return peer;
@@ -253,7 +215,7 @@ function process_room_join(roomId, peerName, signaller){
 
   module.exports.handle_room_join_request = handle_room_join_request;
 
- module.exports.handle_media_soup_request = handle_media_soup_request;
+ //module.exports.handle_media_soup_request = handle_media_soup_request;
 
  module.exports.handle_close = handle_close;
 
@@ -262,3 +224,45 @@ function process_room_join(roomId, peerName, signaller){
  module.exports.delete_room = delete_room;
 
  module.exports.get_rooms_info = ()=>{ return room_handler.get_rooms_info();};
+
+ module.exports.get_router_capablity = ()=>{
+   return mediasoupRouter.rtpCapabilities;
+ }
+
+ module.exports.createproducer = async ({forceTcp, rtpCapabilities})=>{
+  const { transport, params } = await createWebRtcTransport();
+  producerTransport = transport;
+  return params;
+ };
+
+ module.exports.connectProducerTransport = async (data)=>{
+  await producerTransport.connect({ dtlsParameters: data.dtlsParameters });
+ }
+ 
+ module.exports.connectConsumerTransport = async (data)=>{
+  await consumerTransport.connect({ dtlsParameters: data.dtlsParameters });
+  return;
+ };
+
+ module.exports.produce = async (data)=>{
+  const {kind, rtpParameters} = data;
+  producer = await producerTransport.produce({ kind, rtpParameters });
+  return { id: producer.id };
+ };
+
+ module.exports.createConsumerTransport = async (data)=>{
+   console.log('going to create consumer tranport');
+  const { transport, params } = await createWebRtcTransport();
+  console.log("got consumer transport param ", params);
+      consumerTransport = transport;
+      return params;
+ }
+
+ module.exports.createConsumer  = async (data)=>{
+  const ret = await createConsumer(producer, data.rtpCapabilities);
+  return ret;
+ }
+
+ module.exports.resume = async ()=>{
+   consumer.resume();
+ }

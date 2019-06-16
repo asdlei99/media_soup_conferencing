@@ -1,51 +1,241 @@
 'use strict';
+const mediasoup = require('mediasoup-client');
+const show_msg = require('./util');
 
-class response_caller{
-    //used to save id, and callback handler for success and response
-//for the local room request, 
-//those request are sent to remote and whatever reponse is received is 
-//success or error callback is called by using id.
+let device = null;
+let transport = null;
+let producer = null;
 
-    constructor(){
-        this.res_map = new Map();
-        this.id_ = 0;
+async function loadDevice(routerRtpCapabilities) {
+    try {
+        device = new mediasoup.Device();
+    } catch (error) {
+      if (error.name === 'UnsupportedError') {
+        console.error('browser not supported');
+      }
     }
+   await device.load({ routerRtpCapabilities });
+  }
 
-    _get_id(){
-        this.id_++;
-        return this.id_;
-    }
+  async function subscribe(sender){
+    show_msg("calling subscribe");
+    sender.register_callback(evt=>{
 
-    save_response(success, error){
-        let id = this._get_id();
-        if (this.res_map.has(id)) {
-            show_msg("error : id is afeady saved " + id);
+      const jmsg = JSON.parse(evt.data);
+      if(jmsg.type == 'responseCreateConsumerTransport'){
+        show_msg('responseCreateConsumerTransport');
+        const transport = device.createRecvTransport(jmsg.m);
+        transport.on('connect', ({ dtlsParameters }, callback, errback) => {
+          sender.register_callback(evt=>{
+            const jmsg = JSON.parse(evt.data);
+            if(jmsg.type == 'responseConnectConsumerTransport' ){
+              callback()
+            }
+          });
+          sender.send(JSON.stringify({type:'connectConsumerTransport',
+                'm':{transportId:transport.id, dtlsParameters}}));
+          }
+        );
+
+      transport.on('connectionstatechange', (state) => {
+        switch (state) {
+          case 'connecting':
+          show_msg("connecting subscription");
+           // $txtSubscription.innerHTML = 'subscribing...';
+           // $fsSubscribe.disabled = true;
+            break;
+    
+          case 'connected':
+          show_msg("remove video receved connected recevied");
+          document.querySelector('#shareVideo').srcObject = stream;
+            // $txtSubscription.innerHTML = 'subscribed';
+            // $fsSubscribe.disabled = true;
+            break;
+    
+          case 'failed':
+          show_msg("failed");
+            transport.close();
+            // $txtSubscription.innerHTML = 'failed';
+            // $fsSubscribe.disabled = false;
+            break;
+    
+          default: break;
         }
-        else {
-            this.res_map.set(id, [success, error]);
-        }
-        return id;
+      });
+      
+      let stream;
+    consume(transport, sender, (stream_out)=>{
+      stream = stream_out;
+      sender.send(JSON.stringify({'type':'resume'}));
+    });
     }
+  });
+    sender.send(JSON.stringify({'type':'createConsumerTransport', 
+                m:JSON.stringify({forceTcp:false})})
+                );
+  
+  }
 
-    process(id, msg, is_success){
-        let arr = this.res_map.get(id);
-        if (this.res_map.delete(id) == false) {
-            show_msg("error: id not found " + id);
-        }
-        let callback = (is_success?arr[0]:arr[1]);
-        callback(msg);
+  function consume(transport, sender, callback) {
+    const { rtpCapabilities } = device;
+
+    sender.register_callback(evt=>{
+      const jmsg = JSON.parse(evt.data);
+      console.log(jmsg.type);
+      if(jmsg.type == 'responseConsumer'){
+        show_msg('responsconsume received ', jmsg);
+        const data = jmsg.m;
+        const {
+          producerId,
+          id,
+          kind,
+          rtpParameters,
+        } = data;
+        let codecOptions = {};
+
+        transport.consume({
+            id,
+            producerId,
+            kind,
+            rtpParameters,
+          codecOptions,
+        }).then(consumer=>{
+          const stream = new MediaStream();
+          stream.addTrack(consumer.track);
+          show_msg("remove stream received");
+          callback(stream);
+        });
+       
+      }
+    })
+
+    sender.send(JSON.stringify({type:'consume', m:JSON.stringify({'rtpCapabilities':rtpCapabilities})}));
+  }
+
+ async function publish(sender){
+    
+  sender.register_callback(evt=>{
+      const jmsg = JSON.parse(evt.data);
+      if(jmsg.type == 'responseCreateProducerTransport'){
+         const data = jmsg.m;
+          transport =  device.createSendTransport(data);
+          transport.on('connect', 
+          async ({ dtlsParameters }, callback, errback) => {
+
+              sender.send(JSON.stringify({
+                  'type':'connectProducerTransport', 
+                  m:JSON.stringify({'dtlsParameters':dtlsParameters })
+              }));
+              callback();
+            });
+
+          transport.on('produce', 
+          async ({ kind, rtpParameters }, callback, errback) => {
+          try {
+            sender.register_callback( evt=>{
+                  const jmsg = JSON.parse(evt.data);
+                  if(jmsg.type == 'responseProduce'){
+                      const {id} = jmsg.m;
+                      callback(id);
+                  }
+              });
+              sender.send(JSON.stringify({
+                  type:'produce',
+                  m:{ transportId: transport.id,
+                      kind,
+                      rtpParameters,}
+              }));
+          } catch (err) {
+              errback(err);
+          }
+          });
+
+          transport.on('connectionstatechange', (state) => {
+              switch (state) {
+                case 'connecting':
+                show_msg('conneccting transport');
+                  // $txtPublish.innerHTML = 'publishing...';
+                  // $fsPublish.disabled = true;
+                  // $fsSubscribe.disabled = true;
+                break;
+          
+                case 'connected':
+                show_msg('connected');
+                  
+                  // $txtPublish.innerHTML = 'published';
+                  // $fsPublish.disabled = true;
+                  // $fsSubscribe.disabled = false;
+                break;
+          
+                case 'failed':
+
+                  show_msg('failed handle it fast');
+                   transport.close();
+                  // $txtPublish.innerHTML = 'failed';
+                  // $fsPublish.disabled = false;
+                  // $fsSubscribe.disabled = true;
+                break;
+          
+                default: break;
+              }
+            });
+          
+          // let stream;
+         try {
+              getUserMedia(transport).then(stream=>{
+                document.querySelector('#shareVideo').srcObject = stream;
+               // document.querySelector('#shareVideo').play();
+                show_msg('got stream from user media');
+              });
+         } catch (err) {
+          show_msg("error ", err);
+             //$txtPublish.innerHTML = 'failed';
+         }
+      }
+    });
+
+    sender.send(JSON.stringify({'type':'createProducerTransport',
+          m:JSON.stringify({forceTcp: false,
+              rtpCapabilities: device.rtpCapabilities})
+            })
+            );
+ }
+
+async function getUserMedia(transport) {
+    if (!device.canProduce('video')) {
+      show_msg('cannot produce video');
+      return;
     }
-}
+  
+    let stream;
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    } catch (err) {
+      show_msg('starting webcam failed,', err.message);
+      throw err;
+    }
+    const track = stream.getVideoTracks()[0];
+    const params = { track };
+    
+    producer = await transport.produce(params);
+    return stream;
+  }
 
 class media_soup_conference {
 
+    
     constructor(observer){
         this.stream_observer_ = observer;
     }
+
+    start_consumer(peer_name, signaller){
+      this.start(peer_name, signaller, subscribe )
+    }
   
-    start(peer_name, signaller) {
+    start(peer_name, signaller, functionality = null) {
         this.signaller = signaller;
-        this.request_room_join(peer_name, signaller);
+        if(functionality == null) functionality = publish;
+        this.request_room_join(peer_name, signaller, functionality);
     
     }
 
@@ -58,13 +248,13 @@ class media_soup_conference {
         }));
     }
 
-    request_room_join(peerName, sender){
+    request_room_join(peerName, sender, functionality){
         let self = this;
         sender.register_callback(evt=>{
             let jmsg = JSON.parse(evt.data);
             if(jmsg.type == 'room_join_response'){
                 if(jmsg.status == 'okay'){
-                    self._join_room(peerName, sender);
+                    self._join_room(peerName, sender, functionality);
                 }
                 else{
                     show_msg("error in room join response");
@@ -79,144 +269,30 @@ class media_soup_conference {
         }));
     }
 
-    _join_room(peer_name, sender) {
-        let stream_observer_ = this.stream_observer_;
-        let req_res = new response_caller();
-        // Create a local Room instance associated to the remote Room.
-        const room = new mediasoupClient.Room();
-        // Transport for sending our media.
-        let sendTransport;
-        // Transport for receiving media from remote Peers.
-        let recvTransport;
 
-        show_msg('ROOM:' + room);
-
-        room.join(peer_name)
-            .then((peers) => {
-                show_msg('PEERS:' + peers);
-
-                // Create the Transport for sending our media.
-                sendTransport = room.createTransport('send');
-                // Create the Transport for receiving media from remote Peers.
-                recvTransport = room.createTransport('recv');
-
-                peers.forEach(peer => handlePeer(peer));
-            })
-            .then(() => {
-                // Get our mic and camera
-                show_msg("getting mic and camera");
-                return navigator.mediaDevices.getUserMedia({
-                    audio: true,
-                    video: true
-                });
-            })
-            .then((stream) => {
-                const audioTrack = stream.getAudioTracks()[0];
-                const videoTrack = stream.getVideoTracks()[0];
-
-                // Create Producers for audio and video.
-                const audioProducer = room.createProducer(audioTrack);
-                const videoProducer = room.createProducer(videoTrack);
-
-                // Send our audio.
-                audioProducer.send(sendTransport);
-                // Send our video.
-                videoProducer.send(sendTransport);
-            })
-            .catch((err) => {
-                show_msg("err" + err);
-            });
-
-        // Event fired by local room when a new remote Peer joins the Room
-        room.on('newpeer', (peer) => {
-            show_msg('A new Peer joined the Room:' + peer.name);
-            // Handle the Peer.
-            handlePeer(peer);
-        });
-
-        // Event fired by local room
-        room.on('request', (request, callback, errback) => {
-            show_msg('REQUEST:' + JSON.stringify(request));
-            let id = req_res.save_response(callback, errback);
-           // save_req_res(id, callback, errback);
-            sender.send(
-                JSON.stringify({
-                    'type': 'mediasoup-request',
-                    "id": id,
-                    "request": request
-                }));
-        }
-        );
-
-        // Be ready to send mediaSoup client notifications to our remote mediaSoup Peer
-        room.on('notify', (notification) => {
-            show_msg('New notification from local room:' + JSON.stringify(notification));
-            sender.send(JSON.stringify({
-                "type": 'mediasoup-notification',
-                "m": notification
-            }));
-        });
-
-        //message received from socket(websocket server)
-        sender.register_callback(evt => {
-            let jmsg = JSON.parse(evt.data);
-            if (jmsg.type == 'mediasoup-notification') {
-                show_msg('New notification came from server:' + jmsg.m);
-                room.receiveNotification(jmsg.m);
-            }
-            else if (jmsg.type == "response") {
-                show_msg(jmsg.type + ' ' + jmsg.m);
-                req_res.process(jmsg.id, jmsg.m, true);
-            }
-            else if(jmsg.type == "response_error") {
-                show_msg(jmsg.type + ' ' + jmsg.m);
-                req_res.process(jmsg.id, jmsg.m, false);
-            }
-            
-        });
-
-        function handlePeer(peer) {
-            // Handle all the Consumers in the Peer.
-            peer.consumers.forEach(consumer => handleConsumer(consumer));
-
-            // Event fired when the remote Room or Peer is closed.
-            peer.on('close', () => {
-                show_msg('Remote Peer closed')
-            });
-
-            // Event fired when the remote Peer sends a new media to mediasoup server.
-            peer.on('newconsumer', (consumer) => {
-                show_msg("got new consumer");
-                // Handle the Consumer.
-                handleConsumer(consumer);
-            });
-        }
-
-        function handleConsumer(consumer) {
-            // Receive the media over our receiving Transport.
-            show_msg("handleConsumer called");
-            
-            consumer.receive(recvTransport)
-                .then((track) => {
-                    show_msg('Receiving a new remote MediaStreamTrack:' + consumer.kind);
-                    // Attach the track to a MediaStream and play it.
-                    const stream = new MediaStream();
-                    stream.addTrack(track);
-                    if (stream_observer_)
-                        stream_observer_('receive', consumer.id, consumer.kind, stream);
-                    else {
-                        show_msg("should not come here in receive");
+    _join_room(peer_name, sender, functionality) {
+        //let stream_observer_ = this.stream_observer_;
+       // let req_res = new response_caller();
+       let self = this;
+        sender.register_callback(evt=>{
+            const jmsg = JSON.parse(evt.data);
+            if(jmsg.type == 'response_router_capablity'){
+               show_msg("response_router_capablity got");
+                loadDevice(jmsg.m).then(
+                    ()=>{
+                      functionality(sender);
                     }
+                );
+               // await publish(sender);
+            }
+        });
+        sender.send(JSON.stringify({
+            'type':'get_router_capability'
+        }));
+      }
 
-                });
-
-            // Event fired when the Consumer is closed.
-            consumer.on('close', () => {
-                show_msg('Consumer closed');
-                stream_observer_('close', consumer.id, consumer.kind);
-            });
-        }
 
 
     }
-}
+
+    module.exports = media_soup_conference;

@@ -11,24 +11,71 @@ function handle_conference(request){
     let peer = media_soup_server.save_peer(key, peerName, roomId, ext_connection);
     ext_connection.on('message', function (data) {
         let response = JSON.parse(data.utf8Data);
-        
+        console.log(response.type);
         if(response.type == "request_room_join"){
            media_soup_server.handle_room_join_request(peer);
-        }
-        else if(response.type == 'mediasoup-request'){
-         
-           
-            let request = response.request;//todo: handle this
-            let what = request.method; //todo: handle this
-            let id = response.id;
-            console.log(request, what);
-            media_soup_server.handle_media_soup_request(peer, request, what, id);
         }
         else if(response.type == 'request_close'){
           media_soup_server.handle_close(peer);
         }
-        else if(response.type == 'mediasoup-notification'){
-          media_soup_server.on_notification(response.m, peer);
+        else if(response.type == "get_router_capability"){
+          const capablity = media_soup_server.get_router_capablity();
+          const m = JSON.stringify({
+            type:'response_router_capablity',
+            'm':capablity
+          });
+          ext_connection.send(m);
+        }
+        else if(response.type == 'createProducerTransport' ){
+          media_soup_server.createproducer(JSON.parse(response.m))
+          .then(param=>{
+            ext_connection.send(JSON.stringify({
+              type:'responseCreateProducerTransport',
+              m:param
+            }));
+          });
+          
+        }
+        else if('connectProducerTransport' == response.type){
+          media_soup_server.connectProducerTransport(JSON.parse(response.m));
+        }
+        else if(response.type =='produce'){
+         media_soup_server.produce(response.m)
+         .then(ret=>{ext_connection.send(JSON.stringify({
+                          'type':'responseProduce',
+                       m:ret
+                }));}
+                );
+         
+        }
+        else if('createConsumerTransport' == response.type){
+          console.log("going to call creat consumer tranport");
+          media_soup_server.createConsumerTransport(JSON.parse(response.m))
+          .then(data=>{
+            console.log('sending responsecreateconsumertransport');
+            ext_connection.send(JSON.stringify({type:'responseCreateConsumerTransport', m:data}))});
+        }
+        else if(response.type == 'connectConsumerTransport'){
+          media_soup_server.connectConsumerTransport(response.m)
+          .then( ()=>{ ext_connection.send(JSON.stringify({
+            type:'responseConnectConsumerTransport'
+          }))});
+        }
+        else if(response.type == 'consume'){
+          console.log("going to create consumer");
+          media_soup_server.createConsumer(JSON.parse(response.m))
+          .then(ret=>{
+            console.log("sending back consum response");
+            ext_connection.send(
+              JSON.stringify({ 
+                type:'responseConsumer',
+                m:ret
+              })
+            );
+          });
+        }
+        else if(response.type == "resume"){
+          media_soup_server.resume();
         }
         else{
           console.error("type is not ", response);
@@ -97,6 +144,7 @@ function handle_room_managing_request(request){
       ext_connection.close();
       ext_connection = null;
     }
+    
     else{
       //todo: should not come here
       console.error("should not come here, it is an error");

@@ -4,13 +4,15 @@
   "description": "A basic example of how to use Mediasoup on client side",
   "main": "host_server.js",
   "scripts": {
-    "start": "node host_server.js"
+
+    "start": "cd public;browserify app.js util.js conference_signaler.js media_soup_conference.js -o app-bundle.js;cd ../; node host_server.js"
   },
   "keywords": [
     "conference"
   ],
   "author": "Anil",
   "dependencies": {
-    "express": "^4.16.3"
+    "express": "^4.16.3",
+    "mediasoup-client": "^3.0.7"
   }
 }

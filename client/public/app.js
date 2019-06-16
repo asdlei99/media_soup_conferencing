@@ -1,4 +1,7 @@
 'use strict';
+const conference_signalling = require('./conference_signaler');
+const show_msg = require('./util');
+const media_soup_conference = require('./media_soup_conference');
 
 function get_user_name() {
     let user = document.getElementById("local").value;
@@ -12,14 +15,6 @@ function trace(txt, isError) {
         console.error(txt);
     else
         console.log(txt);
-}
-
-function show_msg(msg) {
-    const NEW_LINE = '</br>';
-    let time = new Date();
-    msg = time.getMinutes() + ':' + time.getSeconds() + ':' + time.getMilliseconds() + '=' + msg;
-    document.getElementById("debug").innerHTML += msg;
-    document.getElementById("debug").innerHTML += NEW_LINE;
 }
 
 function clearMsg() {
@@ -70,18 +65,27 @@ function stream_observer(type, id, kind, stream){
     }
 }
 
-function signIn() {
+function start_streaming(peer_name, signaller){
+    media_soup_conference_ = new media_soup_conference(stream_observer);
+    media_soup_conference_.start(peer_name, signaller);
+}
+
+function start_subsribe(peer_name, signaller){
+    media_soup_conference_ = new media_soup_conference(stream_observer);
+    media_soup_conference_.start_consumer(peer_name, signaller);
+}
+
+function signIn(callback) {
     let server_addr = get_server_url();
     let room_id = get_room_id();
     let peer_name = get_peer_name();
     let signaller = new conference_signalling(server_addr, room_id, peer_name);
     signaller.start(peer_name=>{
-        media_soup_conference_ = new media_soup_conference(stream_observer);
-        media_soup_conference_.start(peer_name, signaller);
+        callback(peer_name, signaller);
     });
 }
 
-function connect() {
+function connect(callback) {
     console.log("connect called");
 
     var server = document.getElementById("server").value;
@@ -91,7 +95,7 @@ function connect() {
         document.getElementById("server").focus();
     }
     else {
-        signIn();
+        signIn(callback);
     }
 }
 
@@ -150,7 +154,12 @@ function delete_room(serverIP, roomId){
 
 document.querySelector('#ServerConnect').addEventListener('click', function (e) {
 
-    connect();
+    connect(start_streaming);
+});
+
+document.querySelector('#Subscribe').addEventListener('click', function (e) {
+
+    connect(start_subsribe);
 });
 
 

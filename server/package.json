@@ -11,7 +11,7 @@
   ],
   "author": "Anil",
   "dependencies": {
-    "mediasoup":"^2.2.3",
-	"websocket":"latest"
+    "mediasoup": "^3.0.12",
+    "websocket": "latest"
   }
 }

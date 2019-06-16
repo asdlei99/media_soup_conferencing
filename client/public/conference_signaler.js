@@ -1,5 +1,5 @@
 'use strict';
-
+const show_msg = require('./util');
 
 function create_conferencing_url(server_url, room_id, peer_name) {
     //ip:port/?roomId=id?peerName=name;
@@ -40,3 +40,5 @@ class conference_signalling {
         this.socket.onmessage = callback;
     }
 }
+
+module.exports = conference_signalling;
