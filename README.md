@@ -3,9 +3,17 @@ Audio video conferencing solution using media soup
 
 How To Run Client
 client page has to be hosted. Currently express server is used to host it.
+client depends on browserify libarary.
+as mediasoup client library depends browserify.
+
+to install browserify run following command
+
+npm install -g browserifiy
+
 
 cd client
 npm install
+
 npm start
 
 go to browser and put 
