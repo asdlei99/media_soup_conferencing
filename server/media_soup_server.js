@@ -3,19 +3,10 @@ const config = require('./config');
 
 //global variable
 let worker;
-let mediasoupRouter;
 let producerTransport;
 let producer;
 let consumerTransport;
 let consumer;
-
-  (async () => {
-    try {
-      await runMediasoupWorker();
-    } catch (err) {
-      console.error(err);
-    }
-  })();
 
   async function runMediasoupWorker() {
 
@@ -31,10 +22,11 @@ let consumer;
     setTimeout(() => process.exit(1), 2000);
   });
   const mediaCodecs = config.mediasoup.router.mediaCodecs;
-  mediasoupRouter = await worker.createRouter({ mediaCodecs });
+  let mediasoupRouter = await worker.createRouter({ mediaCodecs });
+  return mediasoupRouter;
 }
 
-async function createWebRtcTransport() {
+async function createWebRtcTransport(mediasoupRouter) {
   const {
     maxIncomingBitrate,
     initialAvailableOutgoingBitrate
@@ -64,7 +56,8 @@ async function createWebRtcTransport() {
   };
 }
 
-async function createConsumer(producer, rtpCapabilities) {
+async function createConsumer(producer, rtpCapabilities, roomId) {
+  let mediasoupRouter = room_handler.get_room_handle(roomId);
   if (!mediasoupRouter.canConsume(
     {
       producerId: producer.id,
@@ -102,39 +95,49 @@ async function createConsumer(producer, rtpCapabilities) {
 
 
 class _room_handler{
+  /*
+  each element will be object in format
+  {
+    id:routreid
+    room:router_object,
+    name:room_name
+  }
+  */
     constructor(){
-     this.rooms = new Map();
+     this.rooms = new Array();//{id:,room:,name: }
     }
  
     is_room_exists(roomId){
-      return this.rooms.has(Number(roomId));
+      const elm =  this.rooms.find(elem=>elem.id==roomId);
+      return elm !== undefined;
     }
  
     get_room_handle(roomId){
-      return this.rooms.get(Number(roomId)).room;
+      const elm =  this.rooms.find(elem=>elem.id==roomId);
+      return elm !== undefined?elm.room:null; 
     }
 
     save_room(roomId, room, name){
-      this.rooms.set(Number(roomId), { 'room':room, 'name':name});
+      this.rooms.push({id:roomId, 'room':room, 'name':name});
     }
 
     print_rooms(){
       console.log("following rooms id available");
-      for (var [key, value] of this.rooms) {
-        console.log(key);
-      }
+      this.rooms.forEach(elem=>{
+        console.log(elem.id);
+      });
     }
+
     delete_room(roomId){
-      const r =  this.rooms.delete(Number(roomId));
-      return r;
+      const new_rooms = this.rooms.filter(elem=>elem.id != roomId);
+      const status = new_rooms.length < this.rooms;
+      this.rooms = new_rooms;
+      return status;
     }
     
     //return {id:id, name:}
     get_rooms_info(){
-      let arr = new Array();
-      for(let [key, value] of this.rooms){
-          arr.push({'id':key, 'name':value.name});
-      }
+      const arr = this.rooms.map(elem =>{return {'id':elem.id, 'name':elem.name}});
       return arr;
     }
  
@@ -167,7 +170,19 @@ class _room_handler{
  
  let room_handler = new _room_handler();
 
- function create_room(roomName){
+ async function create_room(roomName){
+  const roomInfos = room_handler.get_rooms_info();//{id:, name:}
+  const rooms = roomInfos.filter(info=>info.name == roomName);
+  console.log("total room with name ", roomName, rooms.length);
+  if(rooms.length > 0)
+  {
+    console.log("found existing room for name ", roomName, rooms[0]);
+
+    return rooms[0].id;
+  } 
+
+  //create new one.
+  let mediasoupRouter = await runMediasoupWorker();
   const id = mediasoupRouter.id;
   room_handler.save_room(id, mediasoupRouter, roomName);
   mediasoupRouter.observer.on('close', ()=>{
@@ -225,12 +240,14 @@ function handle_close(peer){
 
  module.exports.get_rooms_info = ()=>{ return room_handler.get_rooms_info();};
 
- module.exports.get_router_capablity = ()=>{
+ module.exports.get_router_capablity = (roomId)=>{
+   let mediasoupRouter = room_handler.get_room_handle(roomId);
    return mediasoupRouter.rtpCapabilities;
  }
 
- module.exports.createproducer = async ({forceTcp, rtpCapabilities})=>{
-  const { transport, params } = await createWebRtcTransport();
+ module.exports.createproducer = async ({forceTcp, rtpCapabilities}, roomId)=>{
+  let router = room_handler.get_room_handle(roomId);
+  const { transport, params } = await createWebRtcTransport(router);
   producerTransport = transport;
   return params;
  };
@@ -250,16 +267,17 @@ function handle_close(peer){
   return { id: producer.id };
  };
 
- module.exports.createConsumerTransport = async (data)=>{
+ module.exports.createConsumerTransport = async (data, roomId)=>{
    console.log('going to create consumer tranport');
-  const { transport, params } = await createWebRtcTransport();
+   let router = room_handler.get_room_handle(roomId);
+  const { transport, params } = await createWebRtcTransport(router);
   console.log("got consumer transport param ", params);
       consumerTransport = transport;
       return params;
  }
 
- module.exports.createConsumer  = async (data)=>{
-  const ret = await createConsumer(producer, data.rtpCapabilities);
+ module.exports.createConsumer  = async (data, roomId)=>{
+  const ret = await createConsumer(producer, data.rtpCapabilities, roomId);
   return ret;
  }
 

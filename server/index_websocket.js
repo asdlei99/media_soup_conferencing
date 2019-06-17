@@ -19,7 +19,7 @@ function handle_conference(request){
           media_soup_server.handle_close(peer);
         }
         else if(response.type == "get_router_capability"){
-          const capablity = media_soup_server.get_router_capablity();
+          const capablity = media_soup_server.get_router_capablity(roomId);
           const m = JSON.stringify({
             type:'response_router_capablity',
             'm':capablity
@@ -27,7 +27,7 @@ function handle_conference(request){
           ext_connection.send(m);
         }
         else if(response.type == 'createProducerTransport' ){
-          media_soup_server.createproducer(JSON.parse(response.m))
+          media_soup_server.createproducer(JSON.parse(response.m), roomId)
           .then(param=>{
             ext_connection.send(JSON.stringify({
               type:'responseCreateProducerTransport',
@@ -50,7 +50,7 @@ function handle_conference(request){
         }
         else if('createConsumerTransport' == response.type){
           console.log("going to call creat consumer tranport");
-          media_soup_server.createConsumerTransport(JSON.parse(response.m))
+          media_soup_server.createConsumerTransport(JSON.parse(response.m), roomId)
           .then(data=>{
             console.log('sending responsecreateconsumertransport');
             ext_connection.send(JSON.stringify({type:'responseCreateConsumerTransport', m:data}))});
@@ -63,7 +63,7 @@ function handle_conference(request){
         }
         else if(response.type == 'consume'){
           console.log("going to create consumer");
-          media_soup_server.createConsumer(JSON.parse(response.m))
+          media_soup_server.createConsumer(JSON.parse(response.m), roomId)
           .then(ret=>{
             console.log("sending back consum response");
             ext_connection.send(
@@ -94,18 +94,24 @@ wsServer.start(config.server.port, handle_conference);
 
 //currently room create and delete request will come on port 8081
 const ROOM_MANG_PORT = 8081;
+
 function handle_room_managing_request(request){
   let ext_connection = request.accept(null, request.origin);
-  let key = request.key;
-  ext_connection.on('message', function (data) {
-    let response = JSON.parse(data.utf8Data);
+  const key = request.key;
+
+  ext_connection.on('message', (data)=>{
+    const response = JSON.parse(data.utf8Data);
     if(response.type == "request_room_open"){
-        let room_name = response.name;
-        const id = media_soup_server.create_room(room_name);
-        ext_connection.send(
+        const room_name = response.name;
+        media_soup_server.create_room(room_name)
+        .then(id=> {
+          console.log("sending back room id", id);
+          ext_connection.send(
           JSON.stringify({type:"room_open_response",
           status:'success', 'id':id})
+        );}
         );
+       
     }
     else if(response.type == "request_room_close"){
       const roomId  = response.id;
