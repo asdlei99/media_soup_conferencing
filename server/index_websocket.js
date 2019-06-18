@@ -27,7 +27,7 @@ function handle_conference(request){
           ext_connection.send(m);
         }
         else if(response.type == 'createProducerTransport' ){
-          media_soup_server.createproducer(JSON.parse(response.m), roomId)
+          media_soup_server.createproducer(JSON.parse(response.m), peer)
           .then(param=>{
             ext_connection.send(JSON.stringify({
               type:'responseCreateProducerTransport',
@@ -37,10 +37,10 @@ function handle_conference(request){
           
         }
         else if('connectProducerTransport' == response.type){
-          media_soup_server.connectProducerTransport(JSON.parse(response.m));
+          media_soup_server.connectProducerTransport(JSON.parse(response.m), peer);
         }
         else if(response.type =='produce'){
-         media_soup_server.produce(response.m)
+         media_soup_server.produce(response.m, peer)
          .then(ret=>{ext_connection.send(JSON.stringify({
                           'type':'responseProduce',
                        m:ret
@@ -50,20 +50,20 @@ function handle_conference(request){
         }
         else if('createConsumerTransport' == response.type){
           console.log("going to call creat consumer tranport");
-          media_soup_server.createConsumerTransport(JSON.parse(response.m), roomId)
+          media_soup_server.createConsumerTransport(JSON.parse(response.m), peer)
           .then(data=>{
             console.log('sending responsecreateconsumertransport');
             ext_connection.send(JSON.stringify({type:'responseCreateConsumerTransport', m:data}))});
         }
         else if(response.type == 'connectConsumerTransport'){
-          media_soup_server.connectConsumerTransport(response.m)
+          media_soup_server.connectConsumerTransport(response.m, peer)
           .then( ()=>{ ext_connection.send(JSON.stringify({
             type:'responseConnectConsumerTransport'
           }))});
         }
         else if(response.type == 'consume'){
           console.log("going to create consumer");
-          media_soup_server.createConsumer(JSON.parse(response.m), roomId)
+          media_soup_server.createConsumer(JSON.parse(response.m), peer)
           .then(ret=>{
             console.log("sending back consum response");
             ext_connection.send(
@@ -75,7 +75,7 @@ function handle_conference(request){
           });
         }
         else if(response.type == "resume"){
-          media_soup_server.resume();
+          media_soup_server.resume(peer);
         }
         else{
           console.error("type is not ", response);

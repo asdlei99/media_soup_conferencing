@@ -3,12 +3,31 @@ const config = require('./config');
 
 //global variable
 let worker;
-let producerTransport;
-let producer;
-let consumerTransport;
-let consumer;
 
-  async function runMediasoupWorker() {
+class ProducerHandler{
+  constructor(){
+    this.producers_ = [];
+  }
+
+  save_producer(producer){
+    this.producers_.push(producer);
+  }
+
+  get_producers_except(producer){
+    return  producer == null? this.producers_:this.producers_.filter(elem=>elem.id != producer.id);
+  }
+
+  remove_producer(producer){
+    const new_arr = this.get_producers_except(producer);
+    this.producers_ = new_arr;
+  }
+  
+};
+
+let producer_handler = new ProducerHandler();
+
+
+async function runMediasoupWorker() {
 
   worker = await mediasoup.createWorker({
     logLevel: config.mediasoup.worker.logLevel,
@@ -56,7 +75,8 @@ async function createWebRtcTransport(mediasoupRouter) {
   };
 }
 
-async function createConsumer(producer, rtpCapabilities, roomId) {
+async function createConsumer(producer, rtpCapabilities, peer) {
+  const roomId = peer.get_roomId();
   let mediasoupRouter = room_handler.get_room_handle(roomId);
   if (!mediasoupRouter.canConsume(
     {
@@ -69,11 +89,15 @@ async function createConsumer(producer, rtpCapabilities, roomId) {
   }
   try {
     console.log("going to create consumer");
-    consumer = await consumerTransport.consume({
+    let consumerTransport = peer.get_consumer_transport();
+    let consumer = await consumerTransport.consume({
       producerId: producer.id,
       rtpCapabilities,
       paused: producer.kind === 'video',
     });
+
+    peer.save_consumer(consumer);
+
   } catch (error) {
     console.error('consume failed', error);
     return;
@@ -82,7 +106,7 @@ async function createConsumer(producer, rtpCapabilities, roomId) {
   // if (consumer.type === 'simulcast') {
   //   await consumer.setPreferredLayers({ spatialLayer: 2, temporalLayer: 2 });
   // }
-
+  let consumer = peer.get_consumer();
   return {
     producerId: producer.id,
     id: consumer.id,
@@ -146,16 +170,35 @@ class _room_handler{
   class _peer{
       constructor(key, name, roomId, con){
           this.id_ = key;
-          this.peer_ = null;
           this.name_ = name;
           this.roomId_ = roomId;
           this.con_ = con;
+          this.producerTransport_ = null;
+          this.producer_ = null;
+          this.consumerTransport_ = null;//todo: FIX ME there could be more than one consumer transport 
+          this.consumer_ = null; //todo: FIX ME there could be more than one consumer.
       }
-      save_peer(peer){
-          this.peer_ = peer;
+      save_producer_transport(transport){
+        this.producerTransport_ = transport;
       }
 
-      get_peer(){ return this.peer_;}
+      get_producer_transport(){ return this.producerTransport_;}
+
+      save_producer(producer){
+        this.producer_ = producer
+      }
+
+      get_producer(){return this.producer_;}
+
+      save_consumer_transport(transport){
+        this.consumerTransport_ = transport;
+      }
+
+      get_consumer_transport(){return this.consumerTransport_;}
+
+      save_consumer(consumer){ this.consumer_ = consumer;}
+
+      get_consumer(){return this.consumer_;}
 
       get_name(){return this.name_;}
       get_roomId(){return this.roomId_;}
@@ -165,6 +208,8 @@ class _room_handler{
         this.peer_= null;
         this.name_ = null;
         this.roomId_ = null;
+        producer_handler.remove_producer(this.producer_);
+        //todo: need to do for producerTransport
       }
   }
  
@@ -245,42 +290,57 @@ function handle_close(peer){
    return mediasoupRouter.rtpCapabilities;
  }
 
- module.exports.createproducer = async ({forceTcp, rtpCapabilities}, roomId)=>{
+ module.exports.createproducer = async ({forceTcp, rtpCapabilities}, peer)=>{
+  const roomId = peer.get_roomId();
   let router = room_handler.get_room_handle(roomId);
   const { transport, params } = await createWebRtcTransport(router);
-  producerTransport = transport;
+  //producerTransport = transport;
+  peer.save_producer_transport(transport);
   return params;
  };
 
- module.exports.connectProducerTransport = async (data)=>{
+ module.exports.connectProducerTransport = async (data, peer)=>{
+   let producerTransport = peer.get_producer_transport();
   await producerTransport.connect({ dtlsParameters: data.dtlsParameters });
  }
  
- module.exports.connectConsumerTransport = async (data)=>{
+
+
+ module.exports.produce = async (data, peer)=>{
+  const {kind, rtpParameters} = data;
+  let producerTransport = peer.get_producer_transport();
+  let producer = await producerTransport.produce({ kind, rtpParameters });
+  peer.save_producer(producer);
+  producer_handler.save_producer(producer);
+  return { id: producer.id };
+ };
+
+ module.exports.createConsumerTransport = async (data, peer)=>{
+   console.log('going to create consumer tranport');
+   const roomId = peer.get_roomId();
+   let router = room_handler.get_room_handle(roomId);
+  const { transport, params } = await createWebRtcTransport(router);
+  console.log("got consumer transport param ", params);
+     // consumerTransport = transport;
+     peer.save_consumer_transport(transport);
+      return params;
+ }
+
+ module.exports.connectConsumerTransport = async (data, peer)=>{
+  let consumerTransport = peer.get_consumer_transport();
   await consumerTransport.connect({ dtlsParameters: data.dtlsParameters });
   return;
  };
 
- module.exports.produce = async (data)=>{
-  const {kind, rtpParameters} = data;
-  producer = await producerTransport.produce({ kind, rtpParameters });
-  return { id: producer.id };
- };
-
- module.exports.createConsumerTransport = async (data, roomId)=>{
-   console.log('going to create consumer tranport');
-   let router = room_handler.get_room_handle(roomId);
-  const { transport, params } = await createWebRtcTransport(router);
-  console.log("got consumer transport param ", params);
-      consumerTransport = transport;
-      return params;
- }
-
- module.exports.createConsumer  = async (data, roomId)=>{
-  const ret = await createConsumer(producer, data.rtpCapabilities, roomId);
+ module.exports.createConsumer  = async (data, peer)=>{
+   const roomId = peer.get_roomId();
+   const producer = peer.get_producer();
+   const producers = producer_handler.get_producers_except(producer);
+  const ret = await createConsumer(producers[0], data.rtpCapabilities, peer);
   return ret;
  }
 
- module.exports.resume = async ()=>{
+ module.exports.resume = async (peer)=>{
+   let consumer = peer.get_consumer();
    consumer.resume();
  }
