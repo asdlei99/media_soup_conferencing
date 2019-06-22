@@ -87,7 +87,7 @@ function handle_conference(request){
           });
         }
         else if(response.type == "resume"){
-          media_soup_server.resume(peer);
+          media_soup_server.resume(peer, response.m);
         }
         else{
           console.error("type is not ", response);
