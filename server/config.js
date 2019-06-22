@@ -56,7 +56,7 @@ module.exports = {
       webRtcTransport: {
         listenIps: [
          // {ip:'localhost', announcedIp:'52.14.119.40'}todo: enable this for aws machine
-          {ip: '192.168.0.102', announcedIp: null}
+          {ip: '192.168.0.101', announcedIp: null}
         ],
         maxIncomingBitrate: 1500000,
         initialAvailableOutgoingBitrate: 1000000,

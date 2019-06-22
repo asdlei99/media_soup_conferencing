@@ -11,6 +11,7 @@ class conference_signalling {
         this.server_address = server_address;
         this.room_id = room_id;
         this.peer_name = peer_name;
+        this.callbacks = [];//{id, callback}
     }
     start(succcess) {
         let url = create_conferencing_url(this.server_address,
@@ -30,14 +31,25 @@ class conference_signalling {
             show_msg("sever connection closed");
         };
 
+        this.socket.onmessage = (evt)=>{
+            console.log(evt);
+            console.log(this.callbacks.length);
+            this.callbacks.forEach(elem=>elem.callback(evt));
+        }
+
     }
 
     send(msg) {
         this.socket.send(msg);
     }
 
-    register_callback(callback) {
-        this.socket.onmessage = callback;
+    unregister_callback(id){
+        const new_arrr = this.callbacks.filter(val=>val.id != id);
+        this.callbacks = new_arrr;
+    }
+
+    register_callback(id, callback) {
+        this.callbacks.push({'id':id, 'callback':callback});
     }
 }
 

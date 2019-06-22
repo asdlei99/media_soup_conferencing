@@ -44,8 +44,20 @@ function handle_conference(request){
          .then(ret=>{ext_connection.send(JSON.stringify({
                           'type':'responseProduce',
                        m:ret
-                }));}
-                );
+                }));
+                return;}
+          )
+          .then(()=>{
+            media_soup_server.getPeersConnection(peer)
+            .then(peers=>{
+              console.log(peers);
+              if(peers == undefined) return;
+              peers.forEach(element => {
+                element.con.send(JSON.stringify({type:"peer_add", m:element.id}));
+              });
+            })
+           
+          });
          
         }
         else if('createConsumerTransport' == response.type){
@@ -63,7 +75,7 @@ function handle_conference(request){
         }
         else if(response.type == 'consume'){
           console.log("going to create consumer");
-          media_soup_server.createConsumer(JSON.parse(response.m), peer)
+          media_soup_server.createConsumer(JSON.parse(response.m), peer, response.id)
           .then(ret=>{
             console.log("sending back consum response");
             ext_connection.send(
