@@ -396,11 +396,8 @@ function handle_close(peer){
    else consumer.resume();
  }
 
- module.exports.getPeersConnection = async (peer)=>{
-        const roomId = peer.get_roomId();
+ module.exports.getPeersConnection = async (roomId)=>{
         const room = room_handler.get_room_handle(roomId);
         const peers = room.get_peers();
-        const peerId = peer.get_id();
-        const otherPeeers = peers.filter(peer_=>peer_.get_id() != peerId);
-        return otherPeeers.map(peer_=>{return {'id':peer_.get_id(), 'con':peer_.get_conection()}});
+        return peers.map(peer_=>{return {'id':peer_.get_id(), 'con':peer_.get_conection()}});
  }

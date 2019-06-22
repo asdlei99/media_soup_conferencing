@@ -48,12 +48,14 @@ function handle_conference(request){
                 return;}
           )
           .then(()=>{
-            media_soup_server.getPeersConnection(peer)
+            media_soup_server.getPeersConnection(roomId)
             .then(peers=>{
               console.log(peers);
               if(peers == undefined) return;
               peers.forEach(element => {
-                element.con.send(JSON.stringify({type:"peer_add", m:element.id}));
+                const id = element.id;
+                const con = element.con;
+                peers.forEach(elm =>{if(elm.id != id) con.send(JSON.stringify({type:"peer_add", m:elm.id}))});
               });
             })
            
