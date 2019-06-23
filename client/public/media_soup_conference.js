@@ -98,6 +98,7 @@ class ConsumerHandler{
         //remove producer
         const new_arr = this.connected_producers_.filter(id=>id != jmsg.m);
         this.connected_producers_ = new_arr;
+        callback('close', jmsg.m, 'video');
       }
 
     });
