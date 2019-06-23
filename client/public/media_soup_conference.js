@@ -14,6 +14,7 @@ class ConsumerHandler{
     this.transport_ = null;
     this.sender_ = null;
     this.callback_ = null;
+    this.connected_producers_ = [];
   }
 
   async subsribe(sender, stream_observer){
@@ -82,9 +83,21 @@ class ConsumerHandler{
       if(jmsg.type == "peer_add" ){
         console.log("add event receive");
         const producer_id = jmsg.m;
-        this.consume(producer_id, stream=>{
-          callback('receive', producer_id, 'video', stream);
-        } )
+        if(this.connected_producers_.find(id=>id == producer_id) == undefined){
+          this.consume(producer_id, (stream, consumerId)=>{
+            callback('receive', producer_id, 'video', stream);
+            this.sender_.send(JSON.stringify({'type':'resume', 'm':consumerId}));
+          } );
+          this.connected_producers_.push(producer_id);
+        }
+        
+      }
+      else if(jmsg.type == "peer_remove"){
+        console.log("peer rmoeve event ", jmsg.m);
+        //remove consumer
+        //remove producer
+        const new_arr = this.connected_producers_.filter(id=>id != jmsg.m);
+        this.connected_producers_ = new_arr;
       }
 
     });
@@ -114,10 +127,12 @@ consume(remote_peer_id, callback) {
             rtpParameters,
           codecOptions,
         }).then(consumer=>{
+          consumer.on('transportclose', ()=>console.error("consumer close", consumer.id));
+          consumer.on('trackended', ()=>console.error("track ended on consumer ", consumer.id));
           const stream = new MediaStream();
           stream.addTrack(consumer.track);
           show_msg("remove stream received");
-          callback(stream);
+          callback(stream, id);
         });
        this.sender_.unregister_callback("consume");
       }

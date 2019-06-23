@@ -2,6 +2,16 @@ const config = require('./config');
 const wsServer = require('./websocket_server'); 
 const media_soup_server = require('./media_soup_server');
 
+async function notify_peers_close(key, roomId){
+  console.log("notify peer called");
+  const peers = await media_soup_server.getPeersConnection(roomId);
+  console.log('notification peers ', peers.length);
+  peers.forEach(peer=>{
+    console.log("calling peer_remove to ", peer.id);
+    peer.con.send(JSON.stringify({type:"peer_remove", m:key}));
+  });
+}
+
  
 function handle_conference(request){
     let ext_connection = request.accept(null, request.origin);
@@ -100,7 +110,7 @@ function handle_conference(request){
     ext_connection.on('close', ()=>{
       console.error(" on close ", peerName, roomId);
       media_soup_server.handle_close(peer);
-
+      notify_peers_close(key, roomId);
     });
 }
 

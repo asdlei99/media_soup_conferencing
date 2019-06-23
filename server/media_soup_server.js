@@ -74,6 +74,12 @@ async function createConsumer(producer, rtpCapabilities, peer) {
       rtpCapabilities,
       paused: producer.kind === 'video',
     });
+    consumer.observer.on('close',
+                   ()=>{
+                     console.error("consumer observer close", consumer.id)
+                      const r = peer.remove_consumer(consumer.id);
+                      console.log("consumer removal is success = ", r);
+                    });
     peer.save_consumer(consumer.id, consumer);
 
   } catch (error) {
@@ -130,6 +136,13 @@ class _peer{
      this.consumers_.push({id,consumer });
   }
 
+  remove_consumer(id){
+    const new_arr = this.consumers_.filter(elem=>elem.id != id);
+    const status = new_arr.length < this.consumers_.length;
+    this.consumers_ = new_arr;
+    return status;
+  }
+
   get_consumer(id){
       const elem = this.consumers_.find((value, index, arra)=>{ return value.id == id});
       if(elem == undefined) return null;
@@ -147,6 +160,10 @@ class _peer{
     this.peer_= null;
     this.name_ = null;
     this.roomId_ = null;
+    this.consumers_.forEach(value=>value.consumer.close());
+    this.consumerTransport_.close();
+    this.producer_.close();
+    this.producerTransport_.close();
     //todo: need to do for producerTransport
   }
 }
@@ -171,8 +188,9 @@ class Room{
 
   remove_peer(peer){
     const id = peer.get_id();
-    const new_peers = this.peers.filter((peer_)=>{peer_.get_id() != id});
+    const new_peers = this.peers.filter((peer_)=>{ return peer_.get_id() != id});
     const status = new_peers.length < this.peers.length;
+    console.log('reomve peer', new_peers.length, this.peers.length);
     this.peers = new_peers;
     return status;//whether remove success or not.
   }
@@ -300,7 +318,6 @@ function handle_close(peer){
     }
     const r = room.remove_peer(peer);
     peer.close();
-   
   }
 
 
