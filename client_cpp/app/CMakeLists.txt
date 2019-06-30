@@ -9,6 +9,8 @@ main.cxx
 if(MSVC)
 	#set_source_files_properties(${SOURCE_FILES}
 	#	PROPERTIES COMPILE_FLAGS "/W3 /WX")
+	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
+	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
 	
 	target_compile_definitions(${EXE_NAME} PUBLIC
 	NOMINMAX
@@ -32,6 +34,18 @@ target_include_directories(${EXE_NAME} PUBLIC
 target_link_libraries(${EXE_NAME} PUBLIC
 #	sdptransform
 	${LIBWEBRTC_BINARY_PATH}/webrtc${CMAKE_STATIC_LIBRARY_SUFFIX}
+	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/mediasoupclient.lib
+	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/sdptransform.lib
+	winmm
+	dmoguids
+	wmcodecdspuuid
+	msdmo
+	secur32
+#amstrmid.lib
+#crypt32.lib
+#iphlpapi.lib
+
+#Strmiids.lib
 )
 
 # Compile definitions for libwebrtc.
