@@ -157,7 +157,7 @@ function handle_room_managing_request(request){
       let ids = new Array();
       let names = new Array();
 
-      rooms.every(obj=>{
+      rooms.forEach(obj=>{
         ids.push(obj.id);
         names.push(obj.name);
         console.log(obj.id, obj.name);
