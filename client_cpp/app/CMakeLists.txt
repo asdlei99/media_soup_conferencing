@@ -26,8 +26,13 @@ target_include_directories(${EXE_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 # Public (interface) headers from dependencies.
 target_include_directories(${EXE_NAME} PUBLIC
 	"${PROJECT_SOURCE_DIR}/deps/libsdptransform/include"
+	"${PROJECT_SOURCE_DIR}/lib/signaller/"
 	"${LIBWEBRTC_INCLUDE_PATH}"
 	"${LIBWEBRTC_INCLUDE_PATH}/third_party/abseil-cpp"
+)
+
+target_link_directories( ${EXE_NAME} PUBLIC
+	$<BUILD_INTERFACE:${BOOST_LIB}/stage/lib>
 )
 
 # Public (interface) dependencies.
@@ -36,6 +41,7 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	${LIBWEBRTC_BINARY_PATH}/webrtc${CMAKE_STATIC_LIBRARY_SUFFIX}
 	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/mediasoupclient.lib
 	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/sdptransform.lib
+	signaller
 	winmm
 	dmoguids
 	wmcodecdspuuid

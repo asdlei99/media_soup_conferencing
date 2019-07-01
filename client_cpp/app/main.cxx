@@ -3,6 +3,7 @@
 #include <cassert>
 #include <memory>
 #include <json.hpp>
+#include "websocket_signaller.h"
 
 using json = nlohmann::json;
 
@@ -166,8 +167,48 @@ void async_get_router_capablity(CallBack callback) {
 	} }.detach();
 }
 
+class signalling_callback : public grt::signaller_callback {
+private:
+	grt::signaller* sender_{ nullptr };
+public:
+	std::string id_;
+	signalling_callback(grt::signaller* p) :sender_{ p } {
+		assert(sender_);
+	}
+
+	void on_message(std::string msg) override {
+		std::cout << "on message = " << msg << '\n';
+	//	grt::async_parse_message(msg, this);
+	}
+
+	void on_connect() override {
+		std::cout << "on connect called\n";
+		//const auto m = grt::create_register_user_req("anil");
+		//sender_->send(m);
+	}
+
+	void on_error(std::string error) override {
+		std::cout << "error occur = " << error << '\n';
+		assert(false);
+	}
+
+	void on_close() override {
+		std::cout << "close sigannling connection\n";
+	}
+};
+
+
+constexpr const char* signalling_port = "1337";
+constexpr const char* signalling_add = "localhost";
+
 int main() {
 	std::cout << "hi mediasoup project\n";
+
+	grt::websocket_signaller signaller;
+	signalling_callback clb{ &signaller };
+
+	signaller.connect(signalling_add, signalling_port, &clb);
+
 	auto device = std::make_unique<mediasoupclient::Device>();
 	assert(device.get());
 	assert(false == device->IsLoaded());
