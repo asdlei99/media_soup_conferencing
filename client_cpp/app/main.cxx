@@ -4,6 +4,7 @@
 #include <memory>
 #include <json.hpp>
 #include "websocket_signaller.h"
+#include "json_parser.h"
 
 using json = nlohmann::json;
 
@@ -167,7 +168,9 @@ void async_get_router_capablity(CallBack callback) {
 	} }.detach();
 }
 
-class signalling_callback : public grt::signaller_callback {
+class signalling_callback : public grt::signaller_callback, 
+	grt::parser_callback {
+
 private:
 	grt::signaller* sender_{ nullptr };
 public:
@@ -178,13 +181,20 @@ public:
 
 	void on_message(std::string msg) override {
 		std::cout << "on message = " << msg << '\n';
-	//	grt::async_parse_message(msg, this);
+		grt::async_parse_message(msg, this);
 	}
 
 	void on_connect() override {
 		std::cout << "on connect called\n";
-		//const auto m = grt::create_register_user_req("anil");
-		//sender_->send(m);
+		/*const json j2 = {
+			{"type", "register_user"},
+			{"name", "test"}
+		};
+		const std::string m = j2.dump();
+		std::cout << "message " << m << '\n';
+		sender_->send(m);*/
+		const auto m = grt::create_register_user_req("anil");
+		sender_->send(m);
 	}
 
 	void on_error(std::string error) override {
@@ -195,10 +205,19 @@ public:
 	void on_close() override {
 		std::cout << "close sigannling connection\n";
 	}
+
+	/*parser callback*/
+	void
+		on_user_register_response(bool isokay, std::string id) override {
+		std::cout << "user register response received\n";
+		std::cout << "status = " << isokay << '\n';
+		std::cout << "id = " << id << '\n';
+		id_ = id;
+	}
 };
 
 
-constexpr const char* signalling_port = "1337";
+constexpr const char* signalling_port = "1339";
 constexpr const char* signalling_add = "localhost";
 
 int main() {

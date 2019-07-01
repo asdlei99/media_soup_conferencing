@@ -27,6 +27,7 @@ target_include_directories(${EXE_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 target_include_directories(${EXE_NAME} PUBLIC
 	"${PROJECT_SOURCE_DIR}/deps/libsdptransform/include"
 	"${PROJECT_SOURCE_DIR}/lib/signaller/"
+	"${PROJECT_SOURCE_DIR}/lib/json_parser/"
 	"${LIBWEBRTC_INCLUDE_PATH}"
 	"${LIBWEBRTC_INCLUDE_PATH}/third_party/abseil-cpp"
 )
@@ -42,6 +43,7 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/mediasoupclient.lib
 	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/sdptransform.lib
 	signaller
+	json_parser
 	winmm
 	dmoguids
 	wmcodecdspuuid
