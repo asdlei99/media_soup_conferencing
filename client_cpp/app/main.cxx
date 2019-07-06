@@ -176,10 +176,20 @@ constexpr const char* signalling_add = "52.14.119.40";
 
 int main() {
 	std::cout << "hi mediasoup project\n";
+	
+	std::promise<std::string> room_id_getter;
+	auto result = room_id_getter.get_future();
 
 	util::async_get_room_id("anil_room", signalling_add, signalling_port, 
-		[](const std::string id) {
+		[&room_id_getter](const std::string id) {
 		std::cout << "id received " << id << '\n';
+		room_id_getter.set_value(id);
+	});
+
+	const auto room_id = result.get();
+	util::async_close_room(room_id, signalling_add, signalling_port,
+		[](const std::string okay) {
+		std::cout << "room close response " << okay << '\n';
 	});
 	//grt::websocket_signaller signaller;
 	//signalling_callback clb{ &signaller };

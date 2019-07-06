@@ -95,26 +95,64 @@ namespace util {
 			return r;
 
 		}
+
+		std::string close_room_req(std::string const room_id, std::string const server,
+			std::string const port) {
+			std::promise<std::string> promise;
+			auto future = promise.get_future();
+
+			grt::websocket_signaller signaller;
+			auto signalling_callback = make_unique(&signaller, [&signaller, room_id]() {
+				const auto m = grt::make_room_close_req(room_id);
+				signaller.send(m);
+			}, [&promise](grt::message_type type, absl::any msg, auto ptr) {
+				if (grt::message_type::close_room_res == type) {
+
+					std::string const result = absl::any_cast<std::string>(msg);
+					std::cout << "close room res" << result << '\n';
+					//delete ptr;//improve this design
+					promise.set_value(result);
+					std::cout << "after promise set\n";
+				}
+			});
+
+			signaller.connect(server, port, std::move(signalling_callback));
+
+			const auto r = future.get();
+			std::cout << "in future " << r << '\n';
+			signaller.disconnect();
+			std::cout << "returning value\n";
+			return r;
+		}
+
+
+
 	}//namespace internal
+
+	template<typename TaskType, typename Response, typename Task, typename... Args>
+	void async_task_executor(Response res, Task task, Args... args) {
+		std::packaged_task<TaskType> task_(task);
+		auto f1 = task_.get_future();
+		std::thread{ std::move(task_), args... }.detach();
+		std::thread{ [f1 = std::move(f1), res]()mutable{
+						res(f1.get());
+				} }.detach();
+	}
 
 	void async_get_room_id(std::string const room_name, std::string const server,
 		std::string const port, id_response res) {
-
-		std::packaged_task<
-			std::string(std::string const, std::string const, std::string const)
-		> task(internal::room_id_geter);
-		auto f1 = task.get_future();
-		std::thread{ std::move(task) , room_name, server, port }.detach();
-		std::thread{ [f1 = std::move(f1), res]() mutable{
-			
-			res(f1.get());
-			} }.detach();
+		async_task_executor<
+			decltype(internal::room_id_geter)
+		>( res, internal::room_id_geter, room_name, server, port);
 
 	}
 
 	void async_close_room(std::string room_id,
 		std::string const server, std::string const port, response res) {
-		//todo: 
-		assert(false); 
+
+		async_task_executor<
+			decltype(internal::close_room_req)
+		>(res, internal::close_room_req, room_id, server, port);
+		
 	}
 }//namespace util

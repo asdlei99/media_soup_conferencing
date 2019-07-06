@@ -21,6 +21,7 @@ namespace grt {
 		call_res_evt,
 		signalling_serv_req_res,
 		create_room_res,
+		close_room_res,
 		invalid
 	};
 

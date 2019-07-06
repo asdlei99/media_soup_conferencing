@@ -48,6 +48,7 @@ namespace grt {
 
 
 	std::string create_room_create_req(std::string room_name);
+	std::string make_room_close_req(std::string room_id);
 	std::string create_register_user_req(std::string name);
 	std::string get_router_capability_msg();
 	std::string make_register_user_res(std::string id, bool okay);
