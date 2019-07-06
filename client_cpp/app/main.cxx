@@ -7,172 +7,31 @@
 #include "json_parser.h"
 #include <future>
 #include "util.h"
+#include "media_soup_conferencing_signalling.h"
 
 using json = nlohmann::json;
-
-namespace util {
-	
-	json generateRouterRtpCapabilities()
-	{
-		auto codecs = json::array();
-		auto headerExtensions = json::array();
-		auto fecMechanisms = json::array();
-
-		codecs = R"(
-	[
-		{
-			"mimeType"             : "audio/opus",
-			"kind"                 : "audio",
-			"clockRate"            : 48000,
-			"preferredPayloadType" : 100,
-			"channels"             : 2,
-			"rtcpFeedback"         : [],
-			"parameters"           :
-			{
-				"useinbandfec" : 1
-			}
-		},
-		{
-			"mimeType"             : "video/VP8",
-			"kind"                 : "video",
-			"clockRate"            : 90000,
-			"preferredPayloadType" : 101,
-			"rtcpFeedback"         :
-			[
-				{ "type": "nack" },
-				{ "type": "nack", "parameter": "pli"  },
-				{ "type": "nack", "parameter": "sli"  },
-				{ "type": "nack", "parameter": "rpsi" },
-				{ "type": "nack", "parameter": "app"  },
-				{ "type": "ccm",  "parameter": "fir"  },
-				{ "type": "goog-remb" }
-			],
-			"parameters" :
-			{
-				"x-google-start-bitrate" : "1500"
-			}
-		},
-		{
-			"mimeType"             : "video/rtx",
-			"kind"                 : "video",
-			"clockRate"            : 90000,
-			"preferredPayloadType" : 102,
-			"rtcpFeedback"         : [],
-			"parameters"           :
-			{
-				"apt" : 101
-			}
-		},
-		{
-			"mimeType"             : "video/H264",
-			"kind"                 : "video",
-			"clockRate"            : 90000,
-			"preferredPayloadType" : 103,
-			"rtcpFeedback"         :
-			[
-				{ "type": "nack" },
-				{ "type": "nack", "parameter": "pli"  },
-				{ "type": "nack", "parameter": "sli"  },
-				{ "type": "nack", "parameter": "rpsi" },
-				{ "type": "nack", "parameter": "app"  },
-				{ "type": "ccm",  "parameter": "fir"  },
-				{ "type": "goog-remb" }
-			],
-			"parameters" :
-			{
-				"level-asymmetry-allowed" : 1,
-				"packetization-mode"      : 1,
-				"profile-level-id"        : "42e01f"
-			}
-		},
-		{
-			"mimeType"             : "video/rtx",
-			"kind"                 : "video",
-			"clockRate"            : 90000,
-			"preferredPayloadType" : 104,
-			"rtcpFeedback"         : [],
-			"parameters"           :
-			{
-				"apt" : 103
-			}
-		}
-	])"_json;
-
-		headerExtensions = R"(
-	[
-		{
-			"kind"             : "audio",
-			"uri"              : "urn:ietf:params:rtp-hdrext:ssrc-audio-level",
-			"preferredId"      : 1,
-			"preferredEncrypt" : false
-		},
-		{
-			"kind"             : "video",
-			"uri"              : "urn:ietf:params:rtp-hdrext:toffset",
-			"preferredId"      : 2,
-			"preferredEncrypt" : false
-		},
-		{
-			"kind"             : "audio",
-			"uri"              : "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time",
-			"preferredId"      : 3,
-			"preferredEncrypt" : false
-		},
-		{
-			"kind"             : "video",
-			"uri"              : "http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time",
-			"preferredId"      : 3,
-			"preferredEncrypt" : false
-		},
-		{
-			"kind"             : "video",
-			"uri"              : "urn:3gpp:video-orientation",
-			"preferredId"      : 4,
-			"preferredEncrypt" : false
-		},
-		{
-			"kind"             : "audio",
-			"uri"              : "urn:ietf:params:rtp-hdrext:sdes:mid",
-			"preferredId"      : 5,
-			"preferredEncrypt" : false
-		},
-		{
-			"kind"             : "video",
-			"uri"              : "urn:ietf:params:rtp-hdrext:sdes:mid",
-			"preferredId"      : 5,
-			"preferredEncrypt" : false
-		},
-		{
-			"kind"             : "video",
-			"uri"              : "urn:ietf:params:rtp-hdrext:sdes:rtp-stream-id",
-			"preferredId"      : 6,
-			"preferredEncrypt" : false
-		}
-	])"_json;
-
-		json capabilities =
-		{
-			{ "codecs",           codecs           },
-			{ "headerExtensions", headerExtensions },
-			{ "fecMechanisms",    fecMechanisms    }
-		};
-
-		return capabilities;
-	};
-}
-
-//todo: get rtc capablity
-template<typename CallBack>
-void async_get_router_capablity(CallBack callback) {
-	std::thread{ [callback]() {
-	const auto capablity = util::generateRouterRtpCapabilities();
-	callback(capablity);
-	} }.detach();
-}
 
 constexpr const char* signalling_port = "8081";
 constexpr const char* room_join_port = "8888";
 constexpr const char* signalling_add = "52.14.119.40";
+
+class media_soup_conference_handler : public grt::parser_callback {
+private:
+	mediasoupclient::Device device_;
+public:
+	void on_message(grt::message_type type, absl::any msg) override {
+		
+		if (grt::message_type::router_capablity == type) {
+			const auto cap = absl::any_cast<json>(msg);
+			std::cout << "\n\nrouter capablity " << cap << '\n';
+			assert(!device_.IsLoaded());
+			device_.Load(cap);
+			assert(device_.IsLoaded());
+		}
+		else
+		assert(false);
+	}
+};
 
 
 int main() {
@@ -189,36 +48,35 @@ int main() {
 
 	const auto room_id = result.get();
 
+	std::promise<std::shared_ptr<grt::signaller>> media_soup_room_signaller_getter;
+	auto signaller_room = media_soup_room_signaller_getter.get_future();
 	util::async_join_room(room_id, "anil", signalling_add, room_join_port,
-		[](std::shared_ptr<grt::signaller> status) {
+		[&media_soup_room_signaller_getter](std::shared_ptr<grt::signaller> status){
 		std::cout << "room join response\n";
 		assert(status);
+		media_soup_room_signaller_getter.set_value(status);
 		});
+	auto room_signaller = signaller_room.get();
 
-	std::cout << "done\n";
+	//make 
+	auto media_soup_confernce = std::make_unique< media_soup_conference_handler>();
+	auto signaller_callback = std::make_unique<grt::media_soup_signalling_cbk>(
+		room_signaller.get(), std::move(media_soup_confernce));
+	room_signaller->set_callback(std::move(signaller_callback));
+	{
+		const auto m = grt::make_router_capablity_req();
+		room_signaller->send(m);
+	}
+
+	//clean up
+	std::cout << "going to close\n";
 	int i;
 	std::cin >> i;
-
 	util::async_close_room(room_id, signalling_add, signalling_port,
 		[](const std::string okay) {
 		std::cout << "room close response " << okay << '\n';
 	});
-	//grt::websocket_signaller signaller;
-	//signalling_callback clb{ &signaller };
-
-	//signaller.connect(signalling_add, signalling_port, &clb);
-
-	//auto device = std::make_unique<mediasoupclient::Device>();
-	//assert(device.get());
-	//assert(false == device->IsLoaded());
-	////todo: next task is to get rtpCapablitities of router 
-	//// therefore signalling support needs to be given
-	//async_get_router_capablity([ptr = device.get()](const json capabity){
-	//	ptr->Load(capabity);
-	//	assert(ptr->IsLoaded());
-	//	std::cout << "device is loaded\n";
-	//});
-
-	//const auto& capablity=	device->GetRtpCapabilities();
 	
+	std::cout << "done\n";
+	std::cin >> i;
 }

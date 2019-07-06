@@ -23,6 +23,7 @@ namespace grt {
 		create_room_res,
 		close_room_res,
 		room_join_res,
+		router_capablity,
 		invalid
 	};
 

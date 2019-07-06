@@ -6,6 +6,8 @@ add_executable(${EXE_NAME}
 main.cxx
 util.h
 util.cpp
+media_soup_conferencing_signalling.h
+media_soup_conferencing_signalling.cpp
 )
 # Add some compile flags to our source files.
 if(MSVC)

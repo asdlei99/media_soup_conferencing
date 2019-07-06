@@ -276,6 +276,10 @@ namespace grt {
 				const std::string status = json_msg[STATUS];
 				caller->on_message(message_type::room_join_res, status);
 			}
+			else if (type == "response_router_capablity") {
+				const auto m = json_msg[PEER_MSG_KEY];
+				caller->on_message(message_type::router_capablity, m);
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
@@ -342,12 +346,12 @@ namespace grt {
 		return j2.dump();
 	}
 
-	std::string get_router_capability_msg() {
-		assert(false);
-		return std::string{};
-		/*const json j2 = {
-			{TYPE, }
-		};*/
+	std::string make_router_capablity_req() {
+	
+		const json j2 = {
+			{TYPE, "get_router_capability"}
+		};
+		return j2.dump();
 	}
 	//std::string 
 	//	make_register_user_res(std::string id, bool okay) {

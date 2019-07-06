@@ -174,7 +174,7 @@ namespace grt {
 
 	void websocket_signaller::connect(std::string host,
 		std::string port, std::shared_ptr<signaller_callback> clb) {
-		connect(host, port, std::string{}, clb);
+		connect(host, port, std::string{"/"}, clb);
 		/*t_ = std::thread{ [this, host, port, clb]() {
 			boost::asio::io_context ioc;
 			session_ = std::make_shared<detail::session>(
