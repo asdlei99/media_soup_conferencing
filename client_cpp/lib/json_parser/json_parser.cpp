@@ -280,6 +280,12 @@ namespace grt {
 				const auto m = json_msg[PEER_MSG_KEY];
 				caller->on_message(message_type::router_capablity, m);
 			}
+			else if (type == "responseCreateProducerTransport") {
+				const auto m = json_msg[PEER_MSG_KEY];
+				/*const std::string id = m[ID];*/
+
+				caller->on_message(message_type::producer_transport_res, m);
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
@@ -351,6 +357,27 @@ namespace grt {
 		const json j2 = {
 			{TYPE, "get_router_capability"}
 		};
+		return j2.dump();
+	}
+
+	static 
+		auto
+		get_procuder_transport_msg(bool force_tcp, json const&  rtpCapablity) {
+		const json m = {
+			{"forceTcp", force_tcp},
+			{"rtpCapabilities", rtpCapablity}
+		};
+		return m.dump();
+	}
+
+	std::string 
+		make_producer_transport_creation_req(bool force_tcp, json const&  rtpCapablity) {
+		
+		const json j2 = {
+			{TYPE, "createProducerTransport"},
+			{PEER_MSG_KEY,get_procuder_transport_msg(force_tcp, rtpCapablity) }
+		};
+
 		return j2.dump();
 	}
 	//std::string 

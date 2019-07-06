@@ -18,7 +18,15 @@ constexpr const char* signalling_add = "52.14.119.40";
 class media_soup_conference_handler : public grt::parser_callback {
 private:
 	mediasoupclient::Device device_;
+	grt::signaller* signaller_{ nullptr };
+	json TransportRemoteParameters;
+
 public:
+	media_soup_conference_handler(grt::signaller* signaller)
+		:signaller_{ signaller } {
+		assert(signaller_);
+	}
+
 	void on_message(grt::message_type type, absl::any msg) override {
 		
 		if (grt::message_type::router_capablity == type) {
@@ -27,9 +35,30 @@ public:
 			assert(!device_.IsLoaded());
 			device_.Load(cap);
 			assert(device_.IsLoaded());
+			assert(device_.CanProduce("video"));
+			assert(device_.CanProduce("audio"));
+
+			//crate producer transport on server
+
+			const auto& rtp = device_.GetRtpCapabilities();
+			const auto m = grt::make_producer_transport_creation_req(false, rtp);
+			signaller_->send(m);
 		}
-		else
-		assert(false);
+
+		else if (grt::message_type::producer_transport_res == type) {
+			TransportRemoteParameters = absl::any_cast<json>(msg);
+			const std::string id = TransportRemoteParameters["id"];
+			const auto iceParameters = TransportRemoteParameters["iceParameters"];
+			const auto iceCandidates = TransportRemoteParameters["iceCandidates"];
+			const auto dtlsParameters = TransportRemoteParameters["dtlsParameters"];
+			
+			std::cout << "producer transport id " << id << '\n';
+			std::cout << "iceparameters " << iceParameters << '\n';
+			std::cout << "iceCandidates " << iceCandidates << '\n';
+			std::cout << "dtls parameters " << dtlsParameters << '\n';
+
+		}
+		else assert(false);
 	}
 };
 
@@ -59,7 +88,7 @@ int main() {
 	auto room_signaller = signaller_room.get();
 
 	//make 
-	auto media_soup_confernce = std::make_unique< media_soup_conference_handler>();
+	auto media_soup_confernce = std::make_unique< media_soup_conference_handler>(room_signaller.get());
 	auto signaller_callback = std::make_unique<grt::media_soup_signalling_cbk>(
 		room_signaller.get(), std::move(media_soup_confernce));
 	room_signaller->set_callback(std::move(signaller_callback));

@@ -3,7 +3,9 @@
 #include <string>
 #include <absl/types/any.h>
 #include "common/common_def.h" //todo: make proper path for this file
+#include <json.hpp>
 
+using json = nlohmann::json;
 constexpr const char* FORWARD_MSG_TYPE_KEY{ "forward_message" };
 namespace grt {
 
@@ -52,6 +54,7 @@ namespace grt {
 	std::string make_room_join_req();
 	std::string create_register_user_req(std::string name);
 	std::string make_router_capablity_req();
+	std::string make_producer_transport_creation_req(bool force_tcp, json const& rtpCapablity);
 	std::string make_register_user_res(std::string id, bool okay);
 	std::string create_ice_servers_req(std::string id);
 	
