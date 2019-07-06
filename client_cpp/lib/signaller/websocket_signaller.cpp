@@ -29,7 +29,7 @@ namespace detail {
 		websocket::stream<tcp::socket> ws_;
 	    boost::beast::multi_buffer buffer_;
 		std::string host_;
-		std::string text_;
+		std::string text_{ "/" };
 		std::shared_ptr<grt::signaller_callback> callbck_{ nullptr };
 	public:
 		// Resolver and socket require an io_context
@@ -49,6 +49,7 @@ namespace detail {
 				std::string port, std::string text) {
 			// Save these for later
 			host_ = host;
+			if(!text.empty())
 		    text_ = text;
 
 			 // Look up the domain name
@@ -89,7 +90,7 @@ namespace detail {
 				return fail(ec, "connect");
 
 			// Perform the websocket handshake
-			ws_.async_handshake(host_, "/",
+			ws_.async_handshake(host_, text_,
 				std::bind(
 					&session::on_handshake,
 					this,
@@ -106,9 +107,6 @@ namespace detail {
 		{
 			if (ec)
 				return fail(ec, "handshake");
-
-			if(!text_.empty())
-				send_message(text_);
 			
 			start_reading();
 			callbck_->on_connect();

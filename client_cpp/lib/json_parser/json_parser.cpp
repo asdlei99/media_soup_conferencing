@@ -272,6 +272,10 @@ namespace grt {
 				//assert(detail::is_status_okay(status));
 				caller->on_message(message_type::close_room_res, status);
 			}
+			else if (type == "room_join_response") {
+				const std::string status = json_msg[STATUS];
+				caller->on_message(message_type::room_join_res, status);
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
@@ -317,6 +321,14 @@ namespace grt {
 		const json j2 = {
 			{TYPE, "request_room_close"},
 		{ID, room_id}
+		};
+		return j2.dump();
+	}
+
+	std::string 
+		make_room_join_req() {
+		const json j2 = {
+			{TYPE, "request_room_join"}
 		};
 		return j2.dump();
 	}

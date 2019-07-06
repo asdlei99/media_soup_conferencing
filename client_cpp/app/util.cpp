@@ -125,13 +125,47 @@ namespace util {
 			return r;
 		}
 
+		std::shared_ptr<grt::signaller> 
+			join_room_req(std::string const room_id, std::string user_name, std::string const server,
+			std::string port) {
+			std::promise<std::string> promise;
+			auto future = promise.get_future();
+
+			auto signaller = std::make_unique< grt::websocket_signaller>();
+			//grt::websocket_signaller signaller;
+			auto signalling_callback = make_unique(signaller.get(), [&signaller, room_id, user_name]() {
+				const auto m = grt::make_room_join_req();
+				signaller->send(m);
+			}, [&promise](grt::message_type type, absl::any msg, auto ptr) {
+				if (grt::message_type::room_join_res == type) {
+
+					std::string const result = absl::any_cast<std::string>(msg);
+					std::cout << "room join response" << result << '\n';
+					//delete ptr;//improve this design
+					promise.set_value(result);
+					std::cout << "after promise set\n";
+				}
+			});
+			const std::string text = std::string{ "/?roomId=" } +room_id + "&peerName=" + user_name;
+			signaller->connect(server, port, text, std::move(signalling_callback));
+
+			const auto r = future.get();
+			if (r == "okay") {
+				return signaller;
+			}
+			std::cout << "in future " << r << '\n';
+			signaller->disconnect();
+			std::cout << "returning value\n";
+			return nullptr;
+		}
+
 
 
 	}//namespace internal
 
 	template<typename TaskType, typename Response, typename Task, typename... Args>
 	void async_task_executor(Response res, Task task, Args... args) {
-		std::packaged_task<TaskType> task_(task);
+		std::packaged_task<TaskType> task_{ task };
 		auto f1 = task_.get_future();
 		std::thread{ std::move(task_), args... }.detach();
 		std::thread{ [f1 = std::move(f1), res]()mutable{
@@ -154,5 +188,12 @@ namespace util {
 			decltype(internal::close_room_req)
 		>(res, internal::close_room_req, room_id, server, port);
 		
+	}
+
+	void async_join_room(std::string const room_id, std::string const user_name, std::string const server,
+		std::string const port, status_type status) {
+		async_task_executor<
+			decltype(internal::join_room_req)
+		>(status, internal::join_room_req, room_id, user_name, server, port);
 	}
 }//namespace util

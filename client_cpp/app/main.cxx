@@ -171,6 +171,7 @@ void async_get_router_capablity(CallBack callback) {
 }
 
 constexpr const char* signalling_port = "8081";
+constexpr const char* room_join_port = "8888";
 constexpr const char* signalling_add = "52.14.119.40";
 
 
@@ -187,6 +188,17 @@ int main() {
 	});
 
 	const auto room_id = result.get();
+
+	util::async_join_room(room_id, "anil", signalling_add, room_join_port,
+		[](std::shared_ptr<grt::signaller> status) {
+		std::cout << "room join response\n";
+		assert(status);
+		});
+
+	std::cout << "done\n";
+	int i;
+	std::cin >> i;
+
 	util::async_close_room(room_id, signalling_add, signalling_port,
 		[](const std::string okay) {
 		std::cout << "room close response " << okay << '\n';
@@ -208,7 +220,5 @@ int main() {
 	//});
 
 	//const auto& capablity=	device->GetRtpCapabilities();
-	std::cout << "done\n";
-	int i;
-	std::cin >> i;
+	
 }
