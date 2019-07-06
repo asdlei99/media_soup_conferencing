@@ -29,11 +29,12 @@ namespace detail {
 		websocket::stream<tcp::socket> ws_;
 	    boost::beast::multi_buffer buffer_;
 		std::string host_;
-		grt::signaller_callback* callbck_{ nullptr };
+		std::string text_;
+		std::shared_ptr<grt::signaller_callback> callbck_{ nullptr };
 	public:
 		// Resolver and socket require an io_context
 		explicit
-			session(boost::asio::io_context& ioc, grt::signaller_callback* callbk)
+			session(boost::asio::io_context& ioc, std::shared_ptr<grt::signaller_callback> callbk)
 			: resolver_(ioc)
 			, ws_(ioc)
 			, callbck_{ callbk }
@@ -45,10 +46,10 @@ namespace detail {
 		void
 			run(
 				std::string host,
-				std::string port) {
+				std::string port, std::string text) {
 			// Save these for later
 			host_ = host;
-			// text_ = text;
+		    text_ = text;
 
 			 // Look up the domain name
 			resolver_.async_resolve(
@@ -106,7 +107,9 @@ namespace detail {
 			if (ec)
 				return fail(ec, "handshake");
 
-			//std::cout << "handshake done";
+			if(!text_.empty())
+				send_message(text_);
+			
 			start_reading();
 			callbck_->on_connect();
 			/*std::thread{
@@ -162,7 +165,7 @@ namespace detail {
 			// std::cout << boost::beast::buffers(buffer_.data()) << std::endl;
 		}
 
-		void set_callback(grt::signaller_callback* callbk) {
+		void set_callback(std::shared_ptr<grt::signaller_callback> callbk) {
 			assert(callbk);
 			callbck_ = callbk;
 		}
@@ -172,18 +175,31 @@ namespace detail {
 namespace grt {
 
 	void websocket_signaller::connect(std::string host,
-		std::string port, signaller_callback* clb) {
-		t_ = std::thread{ [this, host, port, clb]() {
+		std::string port, std::shared_ptr<signaller_callback> clb) {
+		connect(host, port, std::string{}, clb);
+		/*t_ = std::thread{ [this, host, port, clb]() {
 			boost::asio::io_context ioc;
 			session_ = std::make_shared<detail::session>(
 				ioc, clb);
 			session_->run(host, port);
 			ioc.run();
 			}
+		};*/
+	}
+
+	void websocket_signaller::connect(std::string host, std::string port,
+		std::string text, std::shared_ptr<signaller_callback> clb) {
+		t_ = std::thread{ [this, host, port, text, clb]() {
+			boost::asio::io_context ioc;
+			session_ = std::make_shared<detail::session>(
+				ioc, clb);
+			session_->run(host, port, text);
+			ioc.run();
+			}
 		};
 	}
 
-	void websocket_signaller::set_callback(signaller_callback* clb) {
+	void websocket_signaller::set_callback(std::shared_ptr<signaller_callback> clb) {
 		session_->set_callback(clb);
 	}
 

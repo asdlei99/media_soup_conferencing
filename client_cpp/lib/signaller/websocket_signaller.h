@@ -13,8 +13,9 @@ namespace grt {
 	class websocket_signaller : public signaller {
 	public:
 		~websocket_signaller() override;
-		void connect(std::string host, std::string port, signaller_callback* clb) override;
-		void set_callback(signaller_callback* clb) override;
+		void connect(std::string host, std::string port, std::shared_ptr<signaller_callback> clb) override;
+		void connect(std::string host, std::string port, std::string text, std::shared_ptr<signaller_callback> clb) override;
+		void set_callback(std::shared_ptr<signaller_callback> clb) override;
 		void disconnect() override;
 		void send(std::string msg) override;
 

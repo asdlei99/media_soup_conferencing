@@ -14,6 +14,7 @@ constexpr const char* ID{ "id" };
 constexpr const char* STATUS{ "status" };
 constexpr const char* OKAY{ "ok" };
 constexpr const char* OKAY_{ "okay" };
+constexpr const char* SUCESS{ "success" };
 constexpr const char* ERR{ "error" };
 constexpr const char* NAME{ "name" };
 constexpr const char* CON_STATUS{ "connection_status" };
@@ -67,10 +68,10 @@ namespace grt {
 		//	return value;
 		//}
 
-		//bool
-		//	is_status_okay(std::string status) {
-		//	return (status == OKAY || status == OKAY_);
-		//}
+		bool
+			is_status_okay(std::string const status) {
+			return (status == OKAY || status == OKAY_ || status == SUCESS);
+		}
 
 		//bool is_call_accepted(std::string status) {
 		//	return (status == "yes");
@@ -260,6 +261,12 @@ namespace grt {
 				caller->on_message(message_type::signalling_serv_req_res,
 					signaling_server_req_res{is_ok, ip, port});*/
 			}
+			else if (type == "room_open_response") {
+				const auto status = json_msg[STATUS];
+				assert(detail::is_status_okay(status));
+				const std::string id = json_msg[ID];
+				caller->on_message(message_type::create_room_res, id);
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
@@ -291,12 +298,30 @@ namespace grt {
 	//}
 
 	std::string 
+		create_room_create_req(std::string room_name) {
+		const json j2 = {
+			{TYPE, "request_room_open"},
+			{NAME, room_name}
+		};
+		return j2.dump();
+		
+	}
+
+	std::string 
 		create_register_user_req(std::string name) {
 		const json j2 = {
 			{TYPE, REG_USR_REQ},
 			{NAME, name}
 		};
 		return j2.dump();
+	}
+
+	std::string get_router_capability_msg() {
+		assert(false);
+		return std::string{};
+		/*const json j2 = {
+			{TYPE, }
+		};*/
 	}
 	//std::string 
 	//	make_register_user_res(std::string id, bool okay) {

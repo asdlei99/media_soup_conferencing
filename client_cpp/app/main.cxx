@@ -5,6 +5,8 @@
 #include <json.hpp>
 #include "websocket_signaller.h"
 #include "json_parser.h"
+#include <future>
+#include "util.h"
 
 using json = nlohmann::json;
 
@@ -168,76 +170,32 @@ void async_get_router_capablity(CallBack callback) {
 	} }.detach();
 }
 
-class signalling_callback : public grt::signaller_callback, 
-	grt::parser_callback {
+constexpr const char* signalling_port = "8081";
+constexpr const char* signalling_add = "52.14.119.40";
 
-private:
-	grt::signaller* sender_{ nullptr };
-public:
-	std::string id_;
-	signalling_callback(grt::signaller* p) :sender_{ p } {
-		assert(sender_);
-	}
-
-	void on_message(std::string msg) override {
-		std::cout << "on message = " << msg << '\n';
-		grt::async_parse_message(msg, this);
-	}
-
-	void on_connect() override {
-		std::cout << "on connect called\n";
-		/*const json j2 = {
-			{"type", "register_user"},
-			{"name", "test"}
-		};
-		const std::string m = j2.dump();
-		std::cout << "message " << m << '\n';
-		sender_->send(m);*/
-		const auto m = grt::create_register_user_req("anil");
-		sender_->send(m);
-	}
-
-	void on_error(std::string error) override {
-		std::cout << "error occur = " << error << '\n';
-		assert(false);
-	}
-
-	void on_close() override {
-		std::cout << "close sigannling connection\n";
-	}
-
-	/*parser callback*/
-	void
-		on_user_register_response(bool isokay, std::string id) override {
-		std::cout << "user register response received\n";
-		std::cout << "status = " << isokay << '\n';
-		std::cout << "id = " << id << '\n';
-		id_ = id;
-	}
-};
-
-
-constexpr const char* signalling_port = "1339";
-constexpr const char* signalling_add = "localhost";
 
 int main() {
 	std::cout << "hi mediasoup project\n";
 
-	grt::websocket_signaller signaller;
-	signalling_callback clb{ &signaller };
-
-	signaller.connect(signalling_add, signalling_port, &clb);
-
-	auto device = std::make_unique<mediasoupclient::Device>();
-	assert(device.get());
-	assert(false == device->IsLoaded());
-	//todo: next task is to get rtpCapablitities of router 
-	// therefore signalling support needs to be given
-	async_get_router_capablity([ptr = device.get()](const json capabity){
-		ptr->Load(capabity);
-		assert(ptr->IsLoaded());
-		std::cout << "device is loaded\n";
+	util::async_get_room_id("anil_room", signalling_add, signalling_port, 
+		[](const std::string id) {
+		std::cout << "id received " << id << '\n';
 	});
+	//grt::websocket_signaller signaller;
+	//signalling_callback clb{ &signaller };
+
+	//signaller.connect(signalling_add, signalling_port, &clb);
+
+	//auto device = std::make_unique<mediasoupclient::Device>();
+	//assert(device.get());
+	//assert(false == device->IsLoaded());
+	////todo: next task is to get rtpCapablitities of router 
+	//// therefore signalling support needs to be given
+	//async_get_router_capablity([ptr = device.get()](const json capabity){
+	//	ptr->Load(capabity);
+	//	assert(ptr->IsLoaded());
+	//	std::cout << "device is loaded\n";
+	//});
 
 	//const auto& capablity=	device->GetRtpCapabilities();
 	std::cout << "done\n";

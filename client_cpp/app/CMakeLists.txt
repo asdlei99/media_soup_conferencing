@@ -4,6 +4,8 @@ set(EXE_NAME app)
 
 add_executable(${EXE_NAME} 
 main.cxx
+util.h
+util.cpp
 )
 # Add some compile flags to our source files.
 if(MSVC)
