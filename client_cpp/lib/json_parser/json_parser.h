@@ -55,6 +55,9 @@ namespace grt {
 	std::string create_register_user_req(std::string name);
 	std::string make_router_capablity_req();
 	std::string make_producer_transport_creation_req(bool force_tcp, json const& rtpCapablity);
+	std::string make_producer_transport_connect_req(std::string const transport_id, json const& dtls_parameter);
+	std::string make_produce_transport_req(std::string const transport_id, std::string kind,
+		json const& rtp_parameters);
 	std::string make_register_user_res(std::string id, bool okay);
 	std::string create_ice_servers_req(std::string id);
 	

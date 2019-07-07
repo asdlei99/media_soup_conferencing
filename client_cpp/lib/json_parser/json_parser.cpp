@@ -1,7 +1,5 @@
 #include "json_parser.h"
 #include <json.hpp>
-//#include <boost/property_tree/ptree.hpp>
-//#include <boost/property_tree/json_parser.hpp>
 #include <cassert>
 #include <map>
 #include <thread>
@@ -286,6 +284,11 @@ namespace grt {
 
 				caller->on_message(message_type::producer_transport_res, m);
 			}
+			else if (type == "responseProduce") {
+			const auto id_j = json_msg[PEER_MSG_KEY];
+			caller->on_message(message_type::produce_res, id_j);
+
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
@@ -380,6 +383,52 @@ namespace grt {
 
 		return j2.dump();
 	}
+
+	static 
+		auto
+		get_producer_transport_connect_msg(std::string const& transport_id,
+			json const& dtls_parameter) {
+		const json m{
+			{"dtlsParameters",dtls_parameter },
+			{"transportId", transport_id}
+			};
+		return m.dump();
+	}
+
+	
+
+	std::string 
+		make_producer_transport_connect_req(std::string const transport_id,
+			json const& dtls_parameter) {
+		const json j2 = {
+			{TYPE, "connectProducerTransport"},
+		{PEER_MSG_KEY, get_producer_transport_connect_msg(transport_id, dtls_parameter)}
+		};
+		return j2.dump();
+	}
+
+	static
+		auto
+		get_produce_trasport_msg(std::string const transport_id, std::string kind,
+			json const& rtp_parameters) {
+		const json j2 = {
+			{"transportId", transport_id},
+			{"kind", kind},
+			{"rtpParameters", rtp_parameters}
+		};
+		return j2; //.dump();
+	}
+
+	std::string 
+		make_produce_transport_req(std::string const transport_id, std::string kind,
+			json const& rtp_parameters) {
+		const json j2 = {
+			{TYPE, "produce"},
+			{PEER_MSG_KEY, get_produce_trasport_msg(transport_id, kind, rtp_parameters)}
+		};
+		return j2.dump();
+	}
+
 	//std::string 
 	//	make_register_user_res(std::string id, bool okay) {
 	//	return

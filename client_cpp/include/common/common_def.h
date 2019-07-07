@@ -25,6 +25,7 @@ namespace grt {
 		room_join_res,
 		router_capablity,
 		producer_transport_res,
+		produce_res,
 		invalid
 	};
 

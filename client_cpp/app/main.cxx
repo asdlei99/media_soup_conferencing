@@ -1,5 +1,6 @@
 #include <iostream>
 #include <mediasoup/include/Device.hpp>
+#include <mediasoup/include/mediasoupclient.hpp>
 #include <cassert>
 #include <memory>
 #include <json.hpp>
@@ -8,6 +9,7 @@
 #include <future>
 #include "util.h"
 #include "media_soup_conferencing_signalling.h"
+#include "peer_connection/peerConnectionUtils.hpp"
 
 using json = nlohmann::json;
 
@@ -15,11 +17,17 @@ constexpr const char* signalling_port = "8081";
 constexpr const char* room_join_port = "8888";
 constexpr const char* signalling_add = "52.14.119.40";
 
-class media_soup_conference_handler : public grt::parser_callback {
+
+class media_soup_conference_handler : public grt::parser_callback, 
+	public mediasoupclient::SendTransport::Listener, public mediasoupclient::Producer::Listener{
 private:
 	mediasoupclient::Device device_;
 	grt::signaller* signaller_{ nullptr };
 	json TransportRemoteParameters;
+	std::unique_ptr<mediasoupclient::SendTransport> send_transport_{ nullptr };
+	std::unique_ptr<mediasoupclient::Producer> videoProducer_;
+	rtc::scoped_refptr<webrtc::VideoTrackInterface> videoTrack_;
+	std::promise<std::string> producer_response_;
 
 public:
 	media_soup_conference_handler(grt::signaller* signaller)
@@ -56,9 +64,71 @@ public:
 			std::cout << "iceparameters " << iceParameters << '\n';
 			std::cout << "iceCandidates " << iceCandidates << '\n';
 			std::cout << "dtls parameters " << dtlsParameters << '\n';
+			assert(send_transport_.get() == nullptr);
+			send_transport_.reset(device_.CreateSendTransport(this, id, iceParameters,
+				iceCandidates, dtlsParameters));
+			assert(send_transport_.get());
+
+			assert(send_transport_->GetId() == id);
+			std::cout << "connection state in transport " << send_transport_->GetConnectionState() << '\n';
+			assert(send_transport_->IsClosed() == false);
+
+			assert(videoTrack_.get() == nullptr);
+			videoTrack_ = createVideoTrack("video-track-id");
+			assert(videoTrack_.get());
+
+
+			std::vector<webrtc::RtpEncodingParameters> encodings;
+			encodings.emplace_back(webrtc::RtpEncodingParameters());
+			encodings.emplace_back(webrtc::RtpEncodingParameters());
+			encodings.emplace_back(webrtc::RtpEncodingParameters());
+
+			assert(videoProducer_.get() == nullptr);
+			videoProducer_.reset(
+				send_transport_->Produce(this, videoTrack_, &encodings, nullptr));
 
 		}
+		else if (grt::message_type::produce_res == type) {
+			const auto id_j = absl::any_cast<json>(msg);
+			producer_response_.set_value(id_j["id"]);
+		}
 		else assert(false);
+	}
+
+	///mediasoupclient::SendTransport::Listener interface
+	std::future<std::string> OnProduce(
+		const std::string& kind, nlohmann::json rtpParameters, const nlohmann::json& appData) override {
+
+		const auto m = grt::make_produce_transport_req(send_transport_->GetId(), kind, rtpParameters);
+		signaller_->send(m);
+		
+		producer_response_ = std::promise<std::string>{};
+		return producer_response_.get_future();
+	}
+
+	std::future<void> 
+		OnConnect(mediasoupclient::Transport* transport,
+			const nlohmann::json& dtlsParameters) override {
+
+		const auto m = grt::make_producer_transport_connect_req(transport->GetId(), dtlsParameters);
+		signaller_->send(m);
+		//assert(false);
+		std::promise<void> promise;
+
+		promise.set_value();
+
+		return promise.get_future();
+	}
+
+	void 
+		OnConnectionStateChange(mediasoupclient::Transport* transport,
+			const std::string& connectionState) override {
+
+	}
+
+	//Producer::Listener interfaces
+	void OnTransportClose(mediasoupclient::Producer* producer) override {
+
 	}
 };
 

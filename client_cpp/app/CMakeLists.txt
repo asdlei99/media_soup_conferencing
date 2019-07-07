@@ -8,6 +8,12 @@ util.h
 util.cpp
 media_soup_conferencing_signalling.h
 media_soup_conferencing_signalling.cpp
+peer_connection/peerConnectionUtils.hpp
+peer_connection/peerConnectionUtils.cpp
+peer_connection/VcmCapturer.cpp
+peer_connection/VcmCapturer.hpp
+peer_connection/VideoCapturer.hpp
+peer_connection/VideoCapturer.cpp
 )
 # Add some compile flags to our source files.
 if(MSVC)
@@ -57,7 +63,7 @@ target_link_libraries(${EXE_NAME} PUBLIC
 #crypt32.lib
 #iphlpapi.lib
 
-#Strmiids.lib
+Strmiids
 )
 
 # Compile definitions for libwebrtc.
