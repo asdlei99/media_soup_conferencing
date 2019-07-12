@@ -18,6 +18,84 @@ constexpr const char* room_join_port = "8888";
 constexpr const char* signalling_add = "52.14.119.40";
 
 
+class consumer_handler : public mediasoupclient::RecvTransport::Listener
+, public mediasoupclient::Consumer::Listener{
+private:
+	std::unique_ptr<mediasoupclient::RecvTransport> transport_;
+	std::unique_ptr<mediasoupclient::Consumer> audioConsumer_;
+	std::unique_ptr<mediasoupclient::Consumer> videoConsumer_;
+	grt::signaller* signaller_{ nullptr };
+public:
+	consumer_handler(grt::signaller* signaller)
+		:signaller_{ signaller } {
+		assert(signaller_);
+	}
+
+	void set_transport(mediasoupclient::RecvTransport* transport) {
+		assert(transport_.get() == nullptr);
+		transport_.reset(transport);
+		assert(transport_);
+	}
+
+	void consumer(json const& data) {
+		assert(transport_);
+		const std::string kind = data["kind"];
+		
+		auto* consumer = transport_->Consume(this, data["id"], data["producerId"], kind,
+			&data["rtpParameters"]);
+		assert(consumer);
+		if (kind == "audio") {
+			assert(!audioConsumer_);
+			audioConsumer_.reset(consumer);
+			auto* audio_track = audioConsumer_->GetTrack();
+			assert(audio_track);//todo: handle this 
+		}
+		else if (kind == "video") {
+			assert(!videoConsumer_);
+			videoConsumer_.reset(consumer);
+			auto* video_track = videoConsumer_->GetTrack();
+			assert(video_track);//todo: handle this to render 
+		}
+		else
+			assert(false);
+
+		//now ask to server to resume track
+		const auto id = consumer->GetId();
+		const auto m = grt::make_consumer_resume_req(id);
+		this->signaller_->send(m);
+
+	}
+	//RecvTransport::Listener
+	std::future<void>
+		OnConnect(mediasoupclient::Transport* transport,
+			const nlohmann::json& dtlsParameters) override
+	{
+		assert(false);
+
+		//const auto m = grt::make_producer_transport_connect_req(transport->GetId(), dtlsParameters);
+		//signaller_->send(m);
+		////assert(false);
+		std::promise<void> promise;
+
+		promise.set_value();
+
+		return promise.get_future();
+	}
+
+	void
+		OnConnectionStateChange(mediasoupclient::Transport* transport,
+			const std::string& connectionState) override {
+		assert(false);
+
+	}
+
+	//consumer::Listener interfaces
+	void OnTransportClose(mediasoupclient::Consumer* consumer) override{
+
+	}
+
+};
+
 class media_soup_conference_handler : public grt::parser_callback, 
 	public mediasoupclient::SendTransport::Listener, public mediasoupclient::Producer::Listener{
 private:
@@ -28,6 +106,10 @@ private:
 	std::unique_ptr<mediasoupclient::Producer> videoProducer_;
 	rtc::scoped_refptr<webrtc::VideoTrackInterface> videoTrack_;
 	std::promise<std::string> producer_response_;
+
+	std::unique_ptr< consumer_handler> consumer_handler_
+		= std::make_unique< consumer_handler>(signaller_);
+
 
 public:
 	media_soup_conference_handler(grt::signaller* signaller)
@@ -51,6 +133,14 @@ public:
 			const auto& rtp = device_.GetRtpCapabilities();
 			const auto m = grt::make_producer_transport_creation_req(false, rtp);
 			signaller_->send(m);
+
+			//create consumer transport on server
+			{
+				const auto m = grt::make_consumer_transport_creation_req(false);
+				signaller_->send(m);
+			}
+			
+
 		}
 
 		else if (grt::message_type::producer_transport_res == type) {
@@ -91,6 +181,27 @@ public:
 		else if (grt::message_type::produce_res == type) {
 			const auto id_j = absl::any_cast<json>(msg);
 			producer_response_.set_value(id_j["id"]);
+		}
+		else if (grt::message_type::consumer_create_res == type) {
+			const auto param = absl::any_cast<json>(msg);
+			const std::string id = param["id"];
+			const auto iceParameters = param["iceParameters"];
+			const auto iceCandidates = param["iceCandidates"];
+			const auto dtlsParameters = param["dtlsParameters"];
+			auto transport = device_.CreateRecvTransport(consumer_handler_.get(), id,
+				iceParameters, iceCandidates, dtlsParameters);
+			consumer_handler_->set_transport(transport);
+
+		}
+		else if (grt::message_type::peer_add == type) {
+			const auto peer_id = absl::any_cast<std::string>(msg);
+			//todo: check if consumer is already created for this peer id.
+			const auto m = grt::make_consume_req(peer_id, device_.GetRtpCapabilities());
+			signaller_->send(m);
+		}
+		else if (grt::message_type::consumer_res == type) {
+			const auto m = absl::any_cast<json>(msg);
+
 		}
 		else assert(false);
 	}

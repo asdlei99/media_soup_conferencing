@@ -58,6 +58,10 @@ namespace grt {
 	std::string make_producer_transport_connect_req(std::string const transport_id, json const& dtls_parameter);
 	std::string make_produce_transport_req(std::string const transport_id, std::string kind,
 		json const& rtp_parameters);
+
+	std::string make_consumer_transport_creation_req(bool force_tcp);
+	std::string make_consume_req(std::string peer_id, json const& rtc_capablity);
+	std::string make_consumer_resume_req(std::string id);
 	std::string make_register_user_res(std::string id, bool okay);
 	std::string create_ice_servers_req(std::string id);
 	

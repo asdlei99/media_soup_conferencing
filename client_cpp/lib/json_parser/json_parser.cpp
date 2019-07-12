@@ -289,6 +289,18 @@ namespace grt {
 			caller->on_message(message_type::produce_res, id_j);
 
 			}
+			else if (type == "responseCreateConsumerTransport") {
+			const auto m = json_msg[PEER_MSG_KEY];
+			caller->on_message(message_type::consumer_create_res, m);
+			}
+			else if (type == "peer_add") {
+				const std::string id = json_msg[PEER_MSG_KEY];
+				caller->on_message(message_type::peer_add, id);
+			}
+			else if (type == "responseConsumer") {
+				const auto m = json_msg[PEER_MSG_KEY];
+				caller->on_message(message_type::consumer_res, m);
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
@@ -425,6 +437,47 @@ namespace grt {
 		const json j2 = {
 			{TYPE, "produce"},
 			{PEER_MSG_KEY, get_produce_trasport_msg(transport_id, kind, rtp_parameters)}
+		};
+		return j2.dump();
+	}
+
+	static
+		auto 
+		make_consumer_transport_creation_message(bool force_tcp) {
+		const json j2 = { "forceTcp",force_tcp };
+		return j2.dump();
+	}
+
+	std::string make_consumer_transport_creation_req(bool force_tcp) {
+		const json j2 = {
+			{TYPE, "createConsumerTransport"},
+			{PEER_MSG_KEY, make_consumer_transport_creation_message(force_tcp)}
+		};
+		return j2.dump();
+	}
+
+	static 
+		auto
+		make_consume_req_msg(json const& rtc_capablity) {
+		const json j2 = {
+			{"rtpCapabilities", rtc_capablity}
+		};
+		return j2.dump();
+	}
+
+	std::string make_consume_req(std::string peer_id, json const& rtc_capablity) {
+		const json j2 = {
+			{TYPE, "consume"},
+		{ID, peer_id},
+		{PEER_MSG_KEY, make_consume_req_msg(rtc_capablity)}
+		};
+		return j2.dump();
+	}
+
+	std::string make_consumer_resume_req(std::string id) {
+		const json j2 = {
+			{TYPE, "resume"},
+		{PEER_MSG_KEY, id}
 		};
 		return j2.dump();
 	}

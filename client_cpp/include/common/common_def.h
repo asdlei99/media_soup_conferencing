@@ -26,6 +26,10 @@ namespace grt {
 		router_capablity,
 		producer_transport_res,
 		produce_res,
+		consumer_create_res,
+		peer_add,
+		peer_remove,
+		consumer_res,
 		invalid
 	};
 
