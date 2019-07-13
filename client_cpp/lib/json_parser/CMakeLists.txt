@@ -14,7 +14,7 @@ target_include_directories(json_parser PUBLIC
 	"${PROJECT_SOURCE_DIR}/deps/libsdptransform/include"
 	)
 
-target_sources(json_parser PUBLIC
+target_sources(json_parser PRIVATE
 ${ABSL_PATH}/absl/types/bad_any_cast.cc
 )
 
