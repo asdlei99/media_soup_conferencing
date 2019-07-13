@@ -164,20 +164,20 @@ namespace util {
 	}//namespace internal
 
 	template<typename TaskType, typename Response, typename Task, typename... Args>
-	void async_task_executor(Response res, Task task, Args... args) {
+	void async_task_executor(Response&& res, Task task, Args... args) {
 		std::packaged_task<TaskType> task_{ task };
 		auto f1 = task_.get_future();
 		std::thread{ std::move(task_), args... }.detach();
-		std::thread{ [f1 = std::move(f1), res]()mutable{
+		std::thread{ [f1 = std::move(f1), res = std::move(res)]()mutable{
 						res(f1.get());
 				} }.detach();
 	}
 
 	void async_get_room_id(std::string const room_name, std::string const server,
-		std::string const port, id_response res) {
+		std::string const port, id_response&& res) {
 		async_task_executor<
 			decltype(internal::room_id_geter)
-		>( res, internal::room_id_geter, room_name, server, port);
+		>( std::move(res), internal::room_id_geter, room_name, server, port);
 
 	}
 

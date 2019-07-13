@@ -4,16 +4,6 @@ set(EXE_NAME app)
 
 add_executable(${EXE_NAME} 
 main.cxx
-util.h
-util.cpp
-media_soup_conferencing_signalling.h
-media_soup_conferencing_signalling.cpp
-peer_connection/peerConnectionUtils.hpp
-peer_connection/peerConnectionUtils.cpp
-peer_connection/VcmCapturer.cpp
-peer_connection/VcmCapturer.hpp
-peer_connection/VideoCapturer.hpp
-peer_connection/VideoCapturer.cpp
 )
 # Add some compile flags to our source files.
 if(MSVC)
@@ -35,16 +25,18 @@ target_include_directories(${EXE_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include)
 
 # Public (interface) headers from dependencies.
 target_include_directories(${EXE_NAME} PUBLIC
-	"${PROJECT_SOURCE_DIR}/deps/libsdptransform/include"
-	"${PROJECT_SOURCE_DIR}/lib/signaller/"
-	"${PROJECT_SOURCE_DIR}/lib/json_parser/"
-	"${LIBWEBRTC_INCLUDE_PATH}"
-	"${LIBWEBRTC_INCLUDE_PATH}/third_party/abseil-cpp"
+#	"${PROJECT_SOURCE_DIR}/deps/libsdptransform/include"
+#	"${PROJECT_SOURCE_DIR}/lib/signaller/"
+#	"${PROJECT_SOURCE_DIR}/lib/json_parser/"
+#	"${LIBWEBRTC_INCLUDE_PATH}"
+#	"${LIBWEBRTC_INCLUDE_PATH}/third_party/abseil-cpp"
 )
+
 
 target_link_directories( ${EXE_NAME} PUBLIC
 	$<BUILD_INTERFACE:${BOOST_LIB}/stage/lib>
 )
+
 
 # Public (interface) dependencies.
 target_link_libraries(${EXE_NAME} PUBLIC
@@ -59,6 +51,7 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	wmcodecdspuuid
 	msdmo
 	secur32
+	mediasoup_conference
 #amstrmid.lib
 #crypt32.lib
 #iphlpapi.lib
