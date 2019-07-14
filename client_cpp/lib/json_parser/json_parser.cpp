@@ -301,6 +301,14 @@ namespace grt {
 				const auto m = json_msg[PEER_MSG_KEY];
 				caller->on_message(message_type::consumer_res, m);
 			}
+			else if (type == "room_join_req") {
+				const std::string room_id = json_msg["room_id"];
+				const std::string user_name = json_msg["user_name"];
+				const std::string ip = json_msg[IP];
+				const std::string port = json_msg[PORT];
+				caller->on_message(message_type::room_join_req,
+					room_connection_credential{ ip, port, room_id, user_name });
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
