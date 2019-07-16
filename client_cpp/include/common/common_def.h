@@ -23,6 +23,7 @@ namespace grt {
 		create_room_res,
 		close_room_res,
 		room_join_req,
+		room_open_req,
 		room_join_res,
 		router_capablity,
 		producer_transport_res,

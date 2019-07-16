@@ -1,7 +1,7 @@
 #include <iostream>
 #include "ui_communication_handler.h"
 
-constexpr unsigned short ui_server_port = 8085;
+constexpr unsigned short ui_server_port = 8086;
 
 int main() {
 	std::cout << "hi mediasoup project\n";

@@ -309,6 +309,9 @@ namespace grt {
 				caller->on_message(message_type::room_join_req,
 					room_connection_credential{ ip, port, room_id, user_name });
 			}
+			else if (type == "request_room_open") {
+			caller->on_message(message_type::room_open_req, json_msg);
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");

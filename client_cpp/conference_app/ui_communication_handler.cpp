@@ -2,6 +2,7 @@
 #include <cassert>
 #include "websocket_server/websocket_server.h"
 #include "mediasoup_conference/mediasoup_conference.h"
+#include <iostream>
 
 
 namespace grt {
@@ -35,6 +36,10 @@ namespace grt {
 	void ui_communication_handler::on_message(message_type type, absl::any msg) {
 		switch (type) {
 		case message_type::room_join_req:
+		{
+#ifdef _DEBUG
+			std::cout << "room_join_req " << '\n';
+#endif//_DEBUG
 			assert(room_.get() == nullptr);
 			const auto room_info = absl::any_cast<room_connection_credential>(msg);
 			auto room_fut = grt::async_join_room(room_info.user_name_,
@@ -45,6 +50,17 @@ namespace grt {
 
 			room->enter();
 			room_ = room;
+		}
+			break;
+		case message_type::room_open_req:
+		{
+			const json m = absl::any_cast<json>(msg);
+			assert(false);//todo handle this 
+#ifdef _DEBUG
+			std::cout << " room open req from ui " << m << '\n';
+#endif//_DEBUG
+		}
+			break;
 		}
 	}
 
