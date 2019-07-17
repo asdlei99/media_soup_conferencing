@@ -71,6 +71,11 @@ namespace grt {
 			return (status == OKAY || status == OKAY_ || status == SUCESS);
 		}
 
+		bool 
+			convert_to_success(bool const status) {
+			return status ? SUCESS : ERR;
+		}
+
 		//bool is_call_accepted(std::string status) {
 		//	return (status == "yes");
 		//}
@@ -366,6 +371,18 @@ namespace grt {
 		const json j2 = {
 			{TYPE, "request_room_join"}
 		};
+		return j2.dump();
+	}
+
+	std::string 
+		make_room_join_req_res(const bool status,
+			const std::string id) {
+		const json j2 = {
+			{TYPE, "room_join_response"},
+		{STATUS, detail::convert_to_success(status)},
+		{ID, id}
+		};
+		
 		return j2.dump();
 	}
 
