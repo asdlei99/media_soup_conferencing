@@ -41,6 +41,7 @@ namespace grt {
 #ifdef _DEBUG
 			std::cout << "room_join_req " << '\n';
 #endif//_DEBUG
+#ifndef UNIT_TEST
 			assert(room_.get() == nullptr);
 			const auto room_info = absl::any_cast<room_connection_credential>(msg);
 			auto room_fut = grt::async_join_room(room_info.user_name_,
@@ -51,6 +52,14 @@ namespace grt {
 
 			room->enter();
 			room_ = room;
+#else
+			const auto res = make_room_join_req_res(true);
+			auto *func_thread = get_func_thread();
+			func_thread->dispatch(UI_SERVER_ID, res);
+
+#endif//
+
+
 		}
 			break;
 		case message_type::room_open_req:
@@ -68,7 +77,7 @@ namespace grt {
 #else
 			const std::string id = "test";//result.get();
 #endif//
-			const auto res = make_room_join_req_res(true, id);
+			const auto res = make_room_create_req_res(true, id);
 			auto *func_thread = get_func_thread();
 			func_thread->dispatch(UI_SERVER_ID, res);
 			

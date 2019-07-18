@@ -358,6 +358,16 @@ namespace grt {
 	}
 
 	std::string 
+		make_room_create_req_res(bool const status, std::string room_id) {
+		const json j2 = {
+			{TYPE, "room_open_response"},
+			{ID,room_id},
+		{STATUS, detail::convert_to_success(status)}
+		};
+		return j2.dump();
+	}
+
+	std::string 
 		make_room_close_req(std::string room_id) {
 		const json j2 = {
 			{TYPE, "request_room_close"},
@@ -375,12 +385,10 @@ namespace grt {
 	}
 
 	std::string 
-		make_room_join_req_res(const bool status,
-			const std::string id) {
+		make_room_join_req_res(const bool status) {
 		const json j2 = {
 			{TYPE, "room_join_response"},
 		{STATUS, detail::convert_to_success(status)},
-		{ID, id}
 		};
 		
 		return j2.dump();
