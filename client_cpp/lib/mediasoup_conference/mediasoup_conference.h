@@ -3,6 +3,8 @@
 #include <future>
 #include <string>
 #include "room.h"
+#include "common/common_def.h"
+
 namespace grt{
 
 
@@ -17,6 +19,8 @@ namespace grt{
 		async_close_room(std::string const room_id, std::string const server,
 			std::string port);
 
+	std::future< std::vector<room_info>>
+		async_get_room_infos(std::string const server, std::string const port);
 	///////  Room Management API /////////////////////////
 
 	///////  Room USE API /////////////////////////

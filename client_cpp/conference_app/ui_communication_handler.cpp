@@ -4,7 +4,7 @@
 #include "mediasoup_conference/mediasoup_conference.h"
 #include <iostream>
 
-#define UNIT_TEST //todo undef this when real media soup server running and actual connection is inteneded
+//#define UNIT_TEST //todo undef this when real media soup server running and actual connection is inteneded
 
 namespace grt {
 
@@ -82,6 +82,24 @@ namespace grt {
 			func_thread->dispatch(UI_SERVER_ID, res);
 			
 		}
+			break;
+		case message_type::req_room_info:
+			//const std::vector<room_info> info = absl::any_cast<std::vector<room_info>>(msg);
+			const json m = absl::any_cast<json>(msg);
+			const std::string ip = m["ip"];
+			const std::string port = m["port"];
+#ifdef _DEBUG
+			std::cout << "req_room_info "<<ip<<"port ="<<port<<"\n";
+
+#endif//_DEBUG
+#ifndef UNIT_TEST
+			auto result = grt::async_get_room_infos(ip, port);
+			const auto rooms_info = result.get();
+#else
+			std::vector<room_info> const rooms_info{ {"test", "test"}, {"test1", "test1"} };
+			auto *func_thread = get_func_thread();
+			func_thread->dispatch(UI_SERVER_ID, "response_room_info");
+#endif//
 			break;
 		}
 	}

@@ -315,7 +315,33 @@ namespace grt {
 					room_connection_credential{ ip, port, room_id, user_name });
 			}
 			else if (type == "request_room_open") {
-			caller->on_message(message_type::room_open_req, json_msg);
+				caller->on_message(message_type::room_open_req, json_msg);
+			}
+			else if (type == "request_rooms_info") {
+				caller->on_message(message_type::req_room_info, json_msg);
+			}
+			else if (type == "response_room_info") {
+				const int count = json_msg["count"];
+				const auto& ids = json_msg["ids"];
+				const auto& names = json_msg["names"];
+				std::vector<std::string> id_vec;
+				for (const std::string& elm : ids) {
+					id_vec.push_back(elm);
+				}
+				assert(id_vec.size() == count);
+
+				std::vector<std::string> name_vec;
+				for (const std::string& elm : names) {
+					name_vec.push_back(elm);
+				}
+				assert(name_vec.size() == count);
+				std::vector<room_info> output(count);
+				std::transform(id_vec.begin(), id_vec.end(), names.begin(), output.begin(),
+					[](const std::string& id, const std::string& name) {
+					room_info out; out.id_ = id; out.name_ = name;
+					return out;
+				});
+				caller->on_message(message_type::res_rooms_info, output);
 			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
@@ -372,6 +398,14 @@ namespace grt {
 		const json j2 = {
 			{TYPE, "request_room_close"},
 		{ID, room_id}
+		};
+		return j2.dump();
+	}
+
+	std::string 
+		make_room_infos_req() {
+		const json j2 = {
+			{TYPE, "request_rooms_info"}
 		};
 		return j2.dump();
 	}

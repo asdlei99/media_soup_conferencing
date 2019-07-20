@@ -25,6 +25,8 @@ namespace grt {
 		room_join_req,
 		room_open_req,
 		room_join_res,
+		req_room_info,
+		res_rooms_info,
 		router_capablity,
 		producer_transport_res,
 		produce_res,
@@ -91,6 +93,11 @@ namespace grt {
 		std::string port_;
 		std::string room_id_;
 		std::string user_name_;
+	};
+
+	struct room_info {
+		std::string id_;
+		std::string name_;
 	};
 
 }//namespace grt

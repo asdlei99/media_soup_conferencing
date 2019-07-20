@@ -125,6 +125,36 @@ namespace util {
 			return r;
 		}
 
+		std::vector<grt::room_info>
+			get_room_infos_req(std::string const server,
+				std::string const port) {
+			std::promise<std::vector<grt::room_info>> promise;
+			auto future = promise.get_future();
+			grt::websocket_signaller signaller;
+
+			auto signalling_callback = make_unique(&signaller, [&signaller]() {
+				//const auto m = grt::make_room_close_req(room_id);
+				const auto m = grt::make_room_infos_req();
+				signaller.send(m);
+			}, [&promise](grt::message_type type, absl::any msg, auto ptr) {
+				if (grt::message_type::res_rooms_info == type) {
+
+					auto const result = absl::any_cast<std::vector<grt::room_info>>(msg);
+					//std::cout << "close room res" << result << '\n';
+					//delete ptr;//improve this design
+					promise.set_value(result);
+					//std::cout << "after promise set\n";
+				}
+			});
+
+			signaller.connect(server, port, std::move(signalling_callback));
+			const auto r = future.get();
+			//std::cout << "in future " << r << '\n';
+			signaller.disconnect();
+			std::cout << "returning value from room_info\n";
+			return r;
+		}
+
 		std::shared_ptr<grt::signaller> 
 			join_room_req(std::string const room_id, std::string user_name, std::string const server,
 			std::string port) {
@@ -188,6 +218,13 @@ namespace util {
 			decltype(internal::close_room_req)
 		>(res, internal::close_room_req, room_id, server, port);
 		
+	}
+
+	void async_get_rooms_info(std::string const server,
+		std::string const port, room_info_res res) {
+		async_task_executor<
+			decltype(internal::get_room_infos_req)
+		>(res, internal::get_room_infos_req, server, port);
 	}
 
 	void async_join_room(std::string const room_id, std::string const user_name, std::string const server,
