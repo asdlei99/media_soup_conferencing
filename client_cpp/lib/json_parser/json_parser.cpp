@@ -419,6 +419,38 @@ namespace grt {
 	}
 
 	std::string 
+		convert_to_json(std::vector<room_info> const& room_list) {
+		auto const count = room_list.size();
+		std::vector<std::string> ids(count);
+		assert(count == ids.size());
+		std::vector<std::string> names(count);
+		assert(count == names.size());
+		std::transform(room_list.begin(), room_list.end(), ids.begin(),
+			[](const room_info& info) {return info.id_; });
+		std::transform(room_list.begin(), room_list.end(), names.begin(),
+			[](const room_info& info) {return info.name_; });
+		assert(std::mismatch(room_list.begin(), room_list.end(),
+			ids.begin(), [](const room_info& first, const std::string id) { return first.id_ == id; }).first 
+			==  room_list.end());
+		assert(std::mismatch(room_list.begin(), room_list.end(),
+			names.begin(), [](const room_info& first, const std::string name) {
+			return first.name_ == name;
+		}).first == room_list.end());
+
+		json json_ids{ ids };
+		json json_names{ names };
+
+		json const j2{
+			{TYPE, "response_room_info"},
+			{"count", count},
+		{"ids", json_ids},
+		{"names", json_names}
+		};
+
+		return j2.dump();
+	}
+
+	std::string 
 		make_room_join_req_res(const bool status) {
 		const json j2 = {
 			{TYPE, "room_join_response"},
