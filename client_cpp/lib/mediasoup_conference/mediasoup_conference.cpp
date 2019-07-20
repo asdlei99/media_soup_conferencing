@@ -40,6 +40,24 @@ namespace grt {
 
 		return result;
 	}
+	std::future< std::vector<room_info>>
+		async_get_room_infos(std::string const server, std::string const port) {
+		std::packaged_task<util::room_list(util::room_list)> task{
+			[](util::room_list list) {
+#ifdef _DEBUG
+			auto printer = [](const room_info info) {
+					std::cout << info.id_ << " name = " << info.name_ << '\n';
+			};
+			std::for_each(list.begin(), list.end(), printer);
+#endif//_DEBUG
+
+			return list;
+			} };
+			auto result = task.get_future();
+			util::async_get_rooms_info(server, port, std::move(task));
+			return result;
+
+		}
 
 	std::future<std::shared_ptr<room>>
 		async_join_room(std::string const user_name, std::string room_id,

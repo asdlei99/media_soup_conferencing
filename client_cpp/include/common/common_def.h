@@ -22,7 +22,11 @@ namespace grt {
 		signalling_serv_req_res,
 		create_room_res,
 		close_room_res,
+		room_join_req,
+		room_open_req,
 		room_join_res,
+		req_room_info,
+		res_rooms_info,
 		router_capablity,
 		producer_transport_res,
 		produce_res,
@@ -82,6 +86,18 @@ namespace grt {
 		bool is_okay_;
 		std::string ip_;
 		std::string port_;
+	};
+
+	struct room_connection_credential {
+		std::string ip_;
+		std::string port_;
+		std::string room_id_;
+		std::string user_name_;
+	};
+
+	struct room_info {
+		std::string id_;
+		std::string name_;
 	};
 
 }//namespace grt

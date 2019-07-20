@@ -71,6 +71,11 @@ namespace grt {
 			return (status == OKAY || status == OKAY_ || status == SUCESS);
 		}
 
+		bool 
+			convert_to_success(bool const status) {
+			return status ? SUCESS : ERR;
+		}
+
 		//bool is_call_accepted(std::string status) {
 		//	return (status == "yes");
 		//}
@@ -301,6 +306,43 @@ namespace grt {
 				const auto m = json_msg[PEER_MSG_KEY];
 				caller->on_message(message_type::consumer_res, m);
 			}
+			else if (type == "room_join_req") {
+				const std::string room_id = json_msg["room_id"];
+				const std::string user_name = json_msg["user_name"];
+				const std::string ip = json_msg[IP];
+				const std::string port = json_msg[PORT];
+				caller->on_message(message_type::room_join_req,
+					room_connection_credential{ ip, port, room_id, user_name });
+			}
+			else if (type == "request_room_open") {
+				caller->on_message(message_type::room_open_req, json_msg);
+			}
+			else if (type == "request_rooms_info") {
+				caller->on_message(message_type::req_room_info, json_msg);
+			}
+			else if (type == "response_room_info") {
+				const int count = json_msg["count"];
+				const auto& ids = json_msg["ids"];
+				const auto& names = json_msg["names"];
+				std::vector<std::string> id_vec;
+				for (const std::string& elm : ids) {
+					id_vec.push_back(elm);
+				}
+				assert(id_vec.size() == count);
+
+				std::vector<std::string> name_vec;
+				for (const std::string& elm : names) {
+					name_vec.push_back(elm);
+				}
+				assert(name_vec.size() == count);
+				std::vector<room_info> output(count);
+				std::transform(id_vec.begin(), id_vec.end(), names.begin(), output.begin(),
+					[](const std::string& id, const std::string& name) {
+					room_info out; out.id_ = id; out.name_ = name;
+					return out;
+				});
+				caller->on_message(message_type::res_rooms_info, output);
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
@@ -342,6 +384,16 @@ namespace grt {
 	}
 
 	std::string 
+		make_room_create_req_res(bool const status, std::string room_id) {
+		const json j2 = {
+			{TYPE, "room_open_response"},
+			{ID,room_id},
+		{STATUS, detail::convert_to_success(status)}
+		};
+		return j2.dump();
+	}
+
+	std::string 
 		make_room_close_req(std::string room_id) {
 		const json j2 = {
 			{TYPE, "request_room_close"},
@@ -351,10 +403,60 @@ namespace grt {
 	}
 
 	std::string 
+		make_room_infos_req() {
+		const json j2 = {
+			{TYPE, "request_rooms_info"}
+		};
+		return j2.dump();
+	}
+
+	std::string 
 		make_room_join_req() {
 		const json j2 = {
 			{TYPE, "request_room_join"}
 		};
+		return j2.dump();
+	}
+
+	std::string 
+		convert_to_json(std::vector<room_info> const& room_list) {
+		auto const count = room_list.size();
+		std::vector<std::string> ids(count);
+		assert(count == ids.size());
+		std::vector<std::string> names(count);
+		assert(count == names.size());
+		std::transform(room_list.begin(), room_list.end(), ids.begin(),
+			[](const room_info& info) {return info.id_; });
+		std::transform(room_list.begin(), room_list.end(), names.begin(),
+			[](const room_info& info) {return info.name_; });
+		assert(std::mismatch(room_list.begin(), room_list.end(),
+			ids.begin(), [](const room_info& first, const std::string id) { return first.id_ == id; }).first 
+			==  room_list.end());
+		assert(std::mismatch(room_list.begin(), room_list.end(),
+			names.begin(), [](const room_info& first, const std::string name) {
+			return first.name_ == name;
+		}).first == room_list.end());
+
+		json json_ids{ ids };
+		json json_names{ names };
+
+		json const j2{
+			{TYPE, "response_room_info"},
+			{"count", count},
+		{"ids", json_ids},
+		{"names", json_names}
+		};
+
+		return j2.dump();
+	}
+
+	std::string 
+		make_room_join_req_res(const bool status) {
+		const json j2 = {
+			{TYPE, "room_join_response"},
+		{STATUS, detail::convert_to_success(status)},
+		};
+		
 		return j2.dump();
 	}
 

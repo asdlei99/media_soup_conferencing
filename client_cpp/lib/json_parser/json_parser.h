@@ -50,8 +50,12 @@ namespace grt {
 
 
 	std::string create_room_create_req(std::string room_name);
+	std::string make_room_create_req_res(bool const status, std::string room_id);
 	std::string make_room_close_req(std::string room_id);
+	std::string make_room_infos_req();
 	std::string make_room_join_req();
+	std::string convert_to_json(std::vector<room_info> const&);
+	std::string make_room_join_req_res(const bool status);
 	std::string create_register_user_req(std::string name);
 	std::string make_router_capablity_req();
 	std::string make_producer_transport_creation_req(bool force_tcp, json const& rtpCapablity);

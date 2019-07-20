@@ -3,6 +3,7 @@
 #include <functional>
 #include <string>
 #include <future>
+#include "common/common_def.h"
 
 namespace grt {
 	class signaller;
@@ -19,6 +20,11 @@ namespace util {
 	using response = std::packaged_task<bool (std::string)>;;
 	void async_close_room(std::string room_id, 
 		std::string const server, std::string const port, response res);
+
+	using room_list = std::vector<grt::room_info>;
+	using room_info_res = std::packaged_task<room_list(room_list) >;
+	void async_get_rooms_info(std::string const server, 
+		std::string const port, room_info_res res);
 
 	using signaller_handle = std::shared_ptr<grt::signaller>;
 	using room_handle = std::shared_ptr<grt::room>;
