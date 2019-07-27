@@ -3,7 +3,33 @@
 #include <iostream>
 #include "peer_connection/peerConnectionUtils.hpp"
 
+namespace util {
+	//windows util 
+#define WNDCLASS_NAME L"Sample Window Class"
+#define WND_NAME L"Learn to Program Windows"
+
+	HWND get_window_handle() {
+		//do {
+			auto hwd = FindWindow(
+				WNDCLASS_NAME,
+				WND_NAME
+			);
+			assert(hwd);
+			return hwd;
+		/*	if (hwd) break;
+			std::this_thread::sleep_for(std::chrono::seconds(10));
+		} while (true);
+
+		assert(false);*/
+	}
+
+}
+
 namespace grt {
+	std::unique_ptr< video_frame_callback>
+		get_frame_receiver(HWND hwnd, std::unique_ptr< renderer>&& render) {
+		return std::make_unique< video_receiver>(hwnd, std::move(render));
+	}
 	media_soup_conference_handler::media_soup_conference_handler(grt::signaller* signaller)
 		:signaller_{ signaller } {
 		assert(signaller_);
@@ -155,6 +181,14 @@ namespace grt {
 		assert(transport_);
 	}
 
+	void consumer_handler::set_video_renderer() {
+		assert(video_receiver_);
+		auto hwnd = util::get_window_handle();
+		//auto renderer = get_renderer();
+		auto frame_receiver = get_frame_receiver(hwnd, get_renderer());
+		video_receiver_->register_callback(std::move(frame_receiver));
+	}
+
 	void consumer_handler::consumer(json const& data) {
 		assert(transport_);
 		const std::string kind = data["kind"];
@@ -172,7 +206,11 @@ namespace grt {
 			assert(!videoConsumer_);
 			videoConsumer_.reset(consumer);
 			auto* video_track = videoConsumer_->GetTrack();
+			assert(video_receiver_.get() == nullptr);
+			video_receiver_ = get_receiver(video_track);
+			
 			assert(video_track);//todo: handle this to render 
+			this->set_video_renderer();
 		}
 		else
 			assert(false);
