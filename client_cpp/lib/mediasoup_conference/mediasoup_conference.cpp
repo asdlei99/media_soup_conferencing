@@ -20,7 +20,7 @@ namespace grt {
 		});
 		auto result  = task.get_future();
 
-		util::async_get_room_id("anil_room", server, port, std::move(task));
+		util::async_get_room_id(room_name, server, port, std::move(task));
 		
 		return result;
 	}

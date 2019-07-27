@@ -52,13 +52,10 @@ namespace grt {
 
 			room->enter();
 			room_ = room;
-#else
+#endif//UNIT_TEST
 			const auto res = make_room_join_req_res(true);
 			auto *func_thread = get_func_thread();
 			func_thread->dispatch(UI_SERVER_ID, res);
-
-#endif//
-
 
 		}
 			break;

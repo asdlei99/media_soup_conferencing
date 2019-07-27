@@ -306,6 +306,9 @@ namespace grt {
 				const auto m = json_msg[PEER_MSG_KEY];
 				caller->on_message(message_type::consumer_res, m);
 			}
+			else if (type == "responseConnectConsumerTransport") {
+			caller->on_message(message_type::consumer_connect_res, "success");
+			}
 			else if (type == "room_join_req") {
 				const std::string room_id = json_msg["room_id"];
 				const std::string user_name = json_msg["user_name"];
@@ -581,6 +584,26 @@ namespace grt {
 			{TYPE, "resume"},
 		{PEER_MSG_KEY, id}
 		};
+		return j2.dump();
+	}
+
+	auto 
+	get_connect_consumer_msg(std::string const& transport_id,
+			json const& dtls_parameters) {
+		const json j2 = {
+			{"transportId", transport_id},
+		{"dtlsParameters", dtls_parameters}
+		};
+		return j2;
+	}
+
+	std::string make_consumer_trasport_connect_req(std::string transport_id,
+		json const& dtls_parameters) {
+		const json j2 = {
+			{TYPE, "connectConsumerTransport"},
+		{PEER_MSG_KEY, get_connect_consumer_msg(transport_id, dtls_parameters)}
+		};
+
 		return j2.dump();
 	}
 

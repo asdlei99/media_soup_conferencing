@@ -73,7 +73,7 @@ namespace util {
 
 			grt::websocket_signaller signaller;
 			auto signalling_callback = make_unique(&signaller, [&signaller, room_name]() {
-				const auto m = grt::create_room_create_req("anil_room");
+				const auto m = grt::create_room_create_req(room_name);
 				signaller.send(m);
 			}, [&promise](grt::message_type type, absl::any msg, auto ptr) {
 				if (grt::message_type::create_room_res == type) {
