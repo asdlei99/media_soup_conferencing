@@ -34,6 +34,7 @@ namespace grt {
 		peer_add,
 		peer_remove,
 		consumer_res,
+		consumer_connect_res,
 		invalid
 	};
 

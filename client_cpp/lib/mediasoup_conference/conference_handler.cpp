@@ -93,7 +93,14 @@ namespace grt {
 		}
 		else if (grt::message_type::consumer_res == type) {
 			const auto m = absl::any_cast<json>(msg);
+			assert(consumer_handler_);
+			consumer_handler_->consumer(m);
+			//assert(false);
 
+		}
+		else if (grt::message_type::consumer_connect_res == type) {
+			assert(consumer_handler_);
+			consumer_handler_->consumer_connect_res(true);
 		}
 		else assert(false);
 	}
@@ -177,34 +184,38 @@ namespace grt {
 
 	}
 
+	void consumer_handler::consumer_connect_res(bool status) {
+		assert(status);
+		consumer_transport_connect_response_.set_value();
+	}
+
 	//RecvTransport::Listener
 	std::future<void>
 		consumer_handler::OnConnect(mediasoupclient::Transport* transport,
 			const nlohmann::json& dtlsParameters)
 	{
-		assert(false);
-
-		//const auto m = grt::make_producer_transport_connect_req(transport->GetId(), dtlsParameters);
-		//signaller_->send(m);
-		////assert(false);
 		std::promise<void> promise;
+		
+		consumer_transport_connect_response_ = std::move(promise);
+		const auto m = make_consumer_trasport_connect_req(transport->GetId(), dtlsParameters);
+		this->signaller_->send(m);
+	
+		
 
-		promise.set_value();
+		//promise.set_value();
 
-		return promise.get_future();
+		return consumer_transport_connect_response_.get_future();
 	}
 
 	void
 		consumer_handler::OnConnectionStateChange(mediasoupclient::Transport* transport,
 			const std::string& connectionState) {
-		assert(false);
+		//assert(false);
 
 	}
 
 	//consumer::Listener interfaces
-	void consumer_handler::OnTransportClose(mediasoupclient::Consumer* consumer) {
-
-	}
+	void consumer_handler::OnTransportClose(mediasoupclient::Consumer* consumer) {}
 
 
 }//namespace grt

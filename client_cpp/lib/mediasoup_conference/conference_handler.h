@@ -14,12 +14,16 @@ namespace grt {
 		std::unique_ptr<mediasoupclient::Consumer> audioConsumer_;
 		std::unique_ptr<mediasoupclient::Consumer> videoConsumer_;
 		signaller* signaller_{ nullptr };
+		std::promise<void> consumer_transport_connect_response_;
 	public:
 		consumer_handler(grt::signaller* signaller);
 
 		void set_transport(mediasoupclient::RecvTransport* transport);
 
 		void consumer(json const& data);
+
+		void consumer_connect_res(bool status);
+
 		//RecvTransport::Listener
 		std::future<void>
 			OnConnect(mediasoupclient::Transport* transport,
