@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 3.7)
 
 
 add_library(video_receiver
-	video_track_receiver.h
-	video_track_receiver.cpp
+	video_track_receiver_impl.h
+	video_track_receiver_impl.cpp
 	video_frame_callback.h
+	video_track_receiver.h
 	)
 
 	# Add some compile flags to our source files.

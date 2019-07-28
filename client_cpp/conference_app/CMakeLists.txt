@@ -59,6 +59,7 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	video_receiver
 	video_render
 	d3d9
+	media_render_util
 #amstrmid.lib
 #crypt32.lib
 #iphlpapi.lib

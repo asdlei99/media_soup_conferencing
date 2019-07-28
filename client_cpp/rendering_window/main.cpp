@@ -1,64 +1,49 @@
 #include <Windows.h>
 #include <thread>
 #include <cassert>
-#include <future>
-#define WNDCLASS_NAME L"Sample Window Class"
-#define WND_NAME L"Learn to Program Windows"
-
-void get_window_handle() {
-	do {
-		auto hwd = FindWindow(
-			WNDCLASS_NAME,
-			WND_NAME
-		);
-		if (hwd) break;
-		std::this_thread::sleep_for(std::chrono::seconds(5));
-	} while (true);
-	
-	//assert(false);
-}
+#include "video_render_util.h"
+//#define WNDCLASS_NAME L"Sample Window Class"
+//#define WND_NAME L"Learn to Program Windows"
 
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow)
 {
-	// Register the window class.
-	const wchar_t CLASS_NAME[] = WNDCLASS_NAME;
+	//// Register the window class.
+	//const wchar_t CLASS_NAME[] = WNDCLASS_NAME;
 
-	WNDCLASS wc = { };
+	//WNDCLASS wc = { };
 
-	wc.lpfnWndProc = WindowProc;
-	wc.hInstance = hInstance;
-	wc.lpszClassName = CLASS_NAME;
+	//wc.lpfnWndProc = WindowProc;
+	//wc.hInstance = hInstance;
+	//wc.lpszClassName = CLASS_NAME;
 
-	RegisterClass(&wc);
+	//RegisterClass(&wc);
 
-	// Create the window.
+	//// Create the window.
 
-	HWND hwnd = CreateWindowEx(
-		0,                              // Optional window styles.
-		CLASS_NAME,                     // Window class
-		L"Learn to Program Windows",    // Window text
-		WS_OVERLAPPEDWINDOW,            // Window style
+	//HWND hwnd = CreateWindowEx(
+	//	0,                              // Optional window styles.
+	//	CLASS_NAME,                     // Window class
+	//	L"Learn to Program Windows",    // Window text
+	//	WS_OVERLAPPEDWINDOW,            // Window style
 
-		// Size and position
-		CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
+	//	// Size and position
+	//	CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
 
-		NULL,       // Parent window    
-		NULL,       // Menu
-		hInstance,  // Instance handle
-		NULL        // Additional application data
-	);
+	//	NULL,       // Parent window    
+	//	NULL,       // Menu
+	//	hInstance,  // Instance handle
+	//	NULL        // Additional application data
+	//);
 
-
+	HWND hwnd = util::create_rendering_window(hInstance, WindowProc);
 	if (hwnd == NULL) {
 		return 0;
 	}
 
 	ShowWindow(hwnd, nCmdShow);
-
-	auto future = std::async(std::launch::async, get_window_handle);
 
 	// Run the message loop.
 

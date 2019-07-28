@@ -20,11 +20,20 @@ else()
 		PROPERTIES COMPILE_FLAGS -Wall -Wextra -Wpedantic)
 endif()
 
-#[==[
+target_include_directories(${EXE_NAME} PUBLIC
+#	"${PROJECT_SOURCE_DIR}/deps/libsdptransform/include"
+#	"${PROJECT_SOURCE_DIR}/lib/signaller/"
+	"${PROJECT_SOURCE_DIR}/lib/media_render_util/"
+#	"${LIBWEBRTC_INCLUDE_PATH}"
+#	"${LIBWEBRTC_INCLUDE_PATH}/third_party/abseil-cpp"
+)
+
+
 
 # Public (interface) dependencies.
 target_link_libraries(${EXE_NAME} PUBLIC
 #	sdptransform
+#[==[
 	${LIBWEBRTC_BINARY_PATH}/webrtc${CMAKE_STATIC_LIBRARY_SUFFIX}
 	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/mediasoupclient.lib
 	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/sdptransform.lib
@@ -39,12 +48,14 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	func_thread_handler
 	websocket_server
 	video_receiver
+	#]==]
 #amstrmid.lib
 #crypt32.lib
 #iphlpapi.lib
-
-Strmiids
+media_render_util
+video_render
+	d3d9
 )
-#]==]
+
 
 

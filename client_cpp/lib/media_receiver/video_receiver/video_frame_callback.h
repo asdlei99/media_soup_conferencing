@@ -1,5 +1,6 @@
 #ifndef _VIDEO_FRAME_CALLBACK_H__
 #define _VIDEO_FRAME_CALLBACK_H__
+#include <cstdint>
 
 namespace grt {
 	struct yuv_frame {

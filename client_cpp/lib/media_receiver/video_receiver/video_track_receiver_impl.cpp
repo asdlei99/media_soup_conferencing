@@ -1,4 +1,4 @@
-#include "video_track_receiver.h"
+#include "video_track_receiver_impl.h"
 
 
 namespace util {
@@ -19,35 +19,35 @@ namespace util {
 
 namespace grt {
 
-	video_track_receiver::video_track_receiver(webrtc::VideoTrackInterface* track_interface)
+	video_track_receiver_impl::video_track_receiver_impl(webrtc::VideoTrackInterface* track_interface)
 		:rendered_track_{ track_interface } {
 		rendered_track_->AddOrUpdateSink(this, rtc::VideoSinkWants{});
 	}
 
-	video_track_receiver::~video_track_receiver() {
+	video_track_receiver_impl::~video_track_receiver_impl() {
 		rendered_track_->RemoveSink(this);
 	}
 
-	void video_track_receiver::register_callback(
+	void video_track_receiver_impl::register_callback(
 		std::unique_ptr<video_frame_callback> callback) {
 		callback_ = std::move(callback);
 	}
 
-	void video_track_receiver::OnFrame(const webrtc::VideoFrame& frame) {
+	void video_track_receiver_impl::OnFrame(const webrtc::VideoFrame& frame) {
 		if (callback_) {
 			callback_->on_frame(util::convert_to_yuv_frame(frame));
 		}
 			
 	}
 
-	void video_track_receiver::OnDiscardedFrame() {
+	void video_track_receiver_impl::OnDiscardedFrame() {
 
 	}
 
 	std::unique_ptr< video_track_receiver>
 		get_receiver(webrtc::MediaStreamTrackInterface* stream_track) {
 		assert(stream_track);
-		return std::make_unique<video_track_receiver>(
+		return std::make_unique<video_track_receiver_impl>(
 			static_cast<webrtc::VideoTrackInterface*>(stream_track));
 	}
 

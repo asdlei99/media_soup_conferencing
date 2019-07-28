@@ -4,35 +4,9 @@
 #include <mediasoup/include/mediasoupclient.hpp>
 #include "json_parser.h"
 #include "media_receiver/video_receiver/video_track_receiver.h"
-#include "video_render/renderer.h"
+
 namespace grt {
 	class signaller;
-
-	class video_receiver : public video_frame_callback {
-	private:
-		std::shared_ptr<renderer> renderer_;
-		HWND hwnd_;
-	public:
-		video_receiver(HWND hwnd, std::unique_ptr< renderer>&& render)
-			:renderer_{ std::move(render) }, hwnd_{ hwnd }{
-			auto r = SetWindowPos(hwnd_, HWND_TOPMOST,
-				0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOSIZE);
-			assert(r != 0);
-		}
-
-		~video_receiver() {
-
-			auto r = ShowWindow(hwnd_, SW_HIDE);
-			assert(r != 0);//it shows it was previously shown
-		}
-		void on_frame(yuv_frame frame) override {
-			auto frame_info = grt::make_frame_info(
-				frame.y_, frame.u_, frame.v_, frame.stride_y_,
-				frame.stride_u_, frame.stride_v_, frame.w_, frame.h_);
-			renderer_->render_frame(hwnd_, frame_info);
-			grt::clean(frame_info);
-		}
-	};
 
 	class consumer_handler : public mediasoupclient::RecvTransport::Listener
 		, public mediasoupclient::Consumer::Listener {
@@ -43,8 +17,7 @@ namespace grt {
 		signaller* signaller_{ nullptr };
 		std::promise<void> consumer_transport_connect_response_;
 		std::unique_ptr< video_track_receiver> video_receiver_;
-	private:
-		void set_video_renderer();
+	
 	public:
 		consumer_handler(grt::signaller* signaller);
 

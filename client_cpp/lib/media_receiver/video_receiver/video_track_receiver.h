@@ -1,30 +1,15 @@
-#ifndef _VIDEO_TRACK_RECEIVER__H_
-#define _VIDEO_TRACK_RECEIVER__H_
-#include "api/media_stream_interface.h"
-#include "api/video/video_frame.h"
+#ifndef __VIDEO_TRACK_RECE_H_HH_
+#define __VIDEO_TRACK_RECE_H_HH_
 #include "video_frame_callback.h"
-
+#include <memory>//unique_ptr
 
 namespace grt {
-	//todo: peer_connection itself may be made to have this
-	class video_track_receiver : public  rtc::VideoSinkInterface<webrtc::VideoFrame> {
-		
+	class video_track_receiver {
 	public:
-		video_track_receiver(webrtc::VideoTrackInterface* track_interface);
-		~video_track_receiver();
-		void register_callback(std::unique_ptr<video_frame_callback> callback);
-		void OnFrame(const webrtc::VideoFrame& frame) override;
-		void OnDiscardedFrame() override;
-
-	private:
-		rtc::scoped_refptr<webrtc::VideoTrackInterface> rendered_track_;
-		std::unique_ptr<video_frame_callback> callback_;
-	};
-
-	std::unique_ptr< video_track_receiver>
-		get_receiver(webrtc::MediaStreamTrackInterface*);
+		virtual ~video_track_receiver() {}
+		virtual void register_callback(std::unique_ptr<video_frame_callback> callback) = 0;
+	};	
 
 }//namespace grt
 
-
-#endif//_VIDEO_TRACK_RECEIVER__H_
+#endif//
