@@ -3,6 +3,7 @@
 #include <mediasoup/include/Device.hpp>
 #include <mediasoup/include/mediasoupclient.hpp>
 #include "json_parser.h"
+#include "media_receiver/video_receiver/video_track_receiver.h"
 
 namespace grt {
 	class signaller;
@@ -15,6 +16,8 @@ namespace grt {
 		std::unique_ptr<mediasoupclient::Consumer> videoConsumer_;
 		signaller* signaller_{ nullptr };
 		std::promise<void> consumer_transport_connect_response_;
+		std::unique_ptr< video_track_receiver> video_receiver_;
+	
 	public:
 		consumer_handler(grt::signaller* signaller);
 

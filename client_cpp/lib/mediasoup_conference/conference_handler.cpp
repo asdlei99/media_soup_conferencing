@@ -2,8 +2,12 @@
 #include "websocket_signaller.h"
 #include <iostream>
 #include "peer_connection/peerConnectionUtils.hpp"
+#include "media_render_util/video_render_util.h"
+#include "media_receiver/video_receiver/video_track_receiver_impl.h"
+
 
 namespace grt {
+	
 	media_soup_conference_handler::media_soup_conference_handler(grt::signaller* signaller)
 		:signaller_{ signaller } {
 		assert(signaller_);
@@ -172,7 +176,12 @@ namespace grt {
 			assert(!videoConsumer_);
 			videoConsumer_.reset(consumer);
 			auto* video_track = videoConsumer_->GetTrack();
+			assert(video_receiver_.get() == nullptr);
+			video_receiver_ = get_receiver(video_track);
+			
 			assert(video_track);//todo: handle this to render 
+			const auto r = util::set_video_renderer(video_receiver_.get());
+			assert(r);
 		}
 		else
 			assert(false);
