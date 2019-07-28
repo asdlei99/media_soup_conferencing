@@ -84,27 +84,48 @@ namespace grt {
 			const auto iceParameters = param["iceParameters"];
 			const auto iceCandidates = param["iceCandidates"];
 			const auto dtlsParameters = param["dtlsParameters"];
-			auto transport = device_.CreateRecvTransport(consumer_handler_.get(), id,
+
+			auto transport = device_.CreateRecvTransport(this, id,
 				iceParameters, iceCandidates, dtlsParameters);
-			consumer_handler_->set_transport(transport);
+
+			consumer_transport_.reset(transport);
 
 		}
 		else if (grt::message_type::peer_add == type) {
 			const auto peer_id = absl::any_cast<std::string>(msg);
+			assert(consumers_.find(peer_id) == consumers_.end());
+
 			//todo: check if consumer is already created for this peer id.
 			const auto m = grt::make_consume_req(peer_id, device_.GetRtpCapabilities());
 			signaller_->send(m);
 		}
 		else if (grt::message_type::consumer_res == type) {
 			const auto m = absl::any_cast<json>(msg);
-			assert(consumer_handler_);
-			consumer_handler_->consumer(m);
-			//assert(false);
+			//const std::string id = m["id"];
+			const std::string peerId = m["peerId"];
+			
+			assert(consumers_.find(peerId) == consumers_.end());
+
+			const std::string kind = m["kind"];
+			assert(consumer_transport_);
+
+			const auto r = consumers_.emplace(peerId, std::make_unique< consumer_handler>());
+			assert(r.second);//insertion should have hapened
+
+			auto* consumer = consumer_transport_->Consume(r.first->second.get(), m["id"], m["producerId"], kind,
+				&m["rtpParameters"]);
+			r.first->second->consumer(consumer, kind);
+
+			{
+				//now ask to server to resume track
+				const auto id = consumer->GetId();
+				const auto m = grt::make_consumer_resume_req(id);
+				this->signaller_->send(m);
+			}
 
 		}
 		else if (grt::message_type::consumer_connect_res == type) {
-			assert(consumer_handler_);
-			consumer_handler_->consumer_connect_res(true);
+			consumer_transport_connect_response_.set_value();
 		}
 		else assert(false);
 	}
@@ -124,15 +145,26 @@ namespace grt {
 	std::future<void>
 		media_soup_conference_handler::OnConnect(mediasoupclient::Transport* transport,
 			const nlohmann::json& dtlsParameters){
+		if (transport == send_transport_.get()) {
+			const auto m = grt::make_producer_transport_connect_req(transport->GetId(), dtlsParameters);
+			signaller_->send(m);
+			//assert(false);
+			std::promise<void> promise;
 
-		const auto m = grt::make_producer_transport_connect_req(transport->GetId(), dtlsParameters);
-		signaller_->send(m);
-		//assert(false);
-		std::promise<void> promise;
+			promise.set_value();
 
-		promise.set_value();
-
-		return promise.get_future();
+			return promise.get_future();
+		}
+		else {
+			//cosumer transport
+			std::promise<void> promise;
+				
+			consumer_transport_connect_response_ = std::move(promise);
+			const auto m = make_consumer_trasport_connect_req(transport->GetId(), dtlsParameters);
+			this->signaller_->send(m);
+			return consumer_transport_connect_response_.get_future();
+		}
+		
 	}
 
 	void
@@ -147,24 +179,10 @@ namespace grt {
 
 	}
 
+	consumer_handler::consumer_handler() = default;
 
-	consumer_handler::consumer_handler(grt::signaller* signaller)
-		:signaller_{ signaller } {
-		assert(signaller_);
-	}
-
-	void consumer_handler::set_transport(mediasoupclient::RecvTransport* transport) {
-		assert(transport_.get() == nullptr);
-		transport_.reset(transport);
-		assert(transport_);
-	}
-
-	void consumer_handler::consumer(json const& data) {
-		assert(transport_);
-		const std::string kind = data["kind"];
-
-		auto* consumer = transport_->Consume(this, data["id"], data["producerId"], kind,
-			&data["rtpParameters"]);
+	void consumer_handler::consumer(mediasoupclient::Consumer* consumer,
+		std::string const& kind) {
 		assert(consumer);
 		if (kind == "audio") {
 			assert(!audioConsumer_);
@@ -178,49 +196,13 @@ namespace grt {
 			auto* video_track = videoConsumer_->GetTrack();
 			assert(video_receiver_.get() == nullptr);
 			video_receiver_ = get_receiver(video_track);
-			
+
 			assert(video_track);//todo: handle this to render 
 			const auto r = util::set_video_renderer(video_receiver_.get());
 			assert(r);
 		}
 		else
 			assert(false);
-
-		//now ask to server to resume track
-		const auto id = consumer->GetId();
-		const auto m = grt::make_consumer_resume_req(id);
-		this->signaller_->send(m);
-
-	}
-
-	void consumer_handler::consumer_connect_res(bool status) {
-		assert(status);
-		consumer_transport_connect_response_.set_value();
-	}
-
-	//RecvTransport::Listener
-	std::future<void>
-		consumer_handler::OnConnect(mediasoupclient::Transport* transport,
-			const nlohmann::json& dtlsParameters)
-	{
-		std::promise<void> promise;
-		
-		consumer_transport_connect_response_ = std::move(promise);
-		const auto m = make_consumer_trasport_connect_req(transport->GetId(), dtlsParameters);
-		this->signaller_->send(m);
-	
-		
-
-		//promise.set_value();
-
-		return consumer_transport_connect_response_.get_future();
-	}
-
-	void
-		consumer_handler::OnConnectionStateChange(mediasoupclient::Transport* transport,
-			const std::string& connectionState) {
-		//assert(false);
-
 	}
 
 	//consumer::Listener interfaces
