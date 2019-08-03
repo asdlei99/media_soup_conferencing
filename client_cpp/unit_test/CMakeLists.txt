@@ -1,11 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(EXE_NAME rendering_window)
+set(EXE_NAME unit_test)
 
-add_executable(${EXE_NAME} WIN32
-main.cpp
+add_executable(${EXE_NAME} 
+main.cxx
 )
-
 
 add_definitions(/ZI)
 
@@ -24,28 +23,17 @@ else()
 		PROPERTIES COMPILE_FLAGS -Wall -Wextra -Wpedantic)
 endif()
 
-target_include_directories(${EXE_NAME} PUBLIC
-#	"${PROJECT_SOURCE_DIR}/deps/libsdptransform/include"
-#	"${PROJECT_SOURCE_DIR}/lib/signaller/"
-	"${PROJECT_SOURCE_DIR}/lib/media_render_util/"
-#	"${LIBWEBRTC_INCLUDE_PATH}"
-	"${LIBWEBRTC_INCLUDE_PATH}/third_party/abseil-cpp"
-)
-
-
-target_link_directories( ${EXE_NAME} PUBLIC
-	$<BUILD_INTERFACE:${BOOST_LIB}/stage/lib>
-)
+# Private (implementation) header files.
+target_include_directories(${EXE_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/catch)
 
 
 
 # Public (interface) dependencies.
 target_link_libraries(${EXE_NAME} PUBLIC
 	display_manager
-	websocket_server
-	func_thread_handler
-#	sdptransform
+	)
 #[==[
+#	sdptransform
 	${LIBWEBRTC_BINARY_PATH}/webrtc${CMAKE_STATIC_LIBRARY_SUFFIX}
 	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/mediasoupclient.lib
 	${PROJECT_SOURCE_DIR}/lib/mediasoup/Debug/sdptransform.lib
@@ -57,17 +45,20 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	msdmo
 	secur32
 	mediasoup_conference
-	func_thread_handler
-	websocket_server
-	video_receiver
-	#]==]
 #amstrmid.lib
 #crypt32.lib
 #iphlpapi.lib
-media_render_util
-video_render
-	d3d9
+
+Strmiids
 )
 
+# Compile definitions for libwebrtc.
+target_compile_definitions(${EXE_NAME} PUBLIC
+	$<$<NOT:$<PLATFORM_ID:Windows>>:WEBRTC_POSIX>
+	$<$<PLATFORM_ID:Windows>:WEBRTC_WIN>
+	$<$<PLATFORM_ID:Darwin>:WEBRTC_MAC>
+)
+
+#]==]
 
 

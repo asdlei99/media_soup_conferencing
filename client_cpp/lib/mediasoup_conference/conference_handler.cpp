@@ -198,8 +198,9 @@ namespace grt {
 			video_receiver_ = get_receiver(video_track);
 
 			assert(video_track);//todo: handle this to render 
-			const auto r = util::set_video_renderer(video_receiver_.get());
-			assert(r);
+			//const auto r = util::set_video_renderer(video_receiver_.get());
+			//assert(r);
+			util::async_set_video_renderer(video_receiver_.get(), "anil");
 		}
 		else
 			assert(false);

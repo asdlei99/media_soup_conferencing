@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <cassert>
 #include "video_render/renderer.h"
+#include <thread>
 
 constexpr const wchar_t* WNDCLASS_NAME = L"Sample Window Class";
 constexpr const wchar_t* WND_NAME = L"Learn to Program Windows";
@@ -41,12 +42,34 @@ namespace detail {
 }
 
 namespace util {
-	bool set_video_renderer(grt::video_track_receiver* receiver) {
+
+	HWND find_child_window(const wchar_t* className, const wchar_t* parent_wnd_name,
+		const wchar_t* child_wnd_name) {
+		auto parentWnd = FindWindow(className, parent_wnd_name);
+		assert(parentWnd);
+		if (parentWnd == nullptr) return nullptr;
+		auto wnd = FindWindowEx(parentWnd, nullptr, className, child_wnd_name);
+		assert(wnd);
+		return wnd;
+	}
+
+	std::wstring to_wstring(std::string v) {
+		return std::wstring(v.begin(), v.end());
+	}
+
+	std::pair<std::string, std::string>
+		get_parent_wnd(std::string const& render_id) {
+		return std::make_pair("Sample Window Class", "Main Window");
+	}
+
+
+	bool set_video_renderer(grt::video_track_receiver* receiver, std::string const& renderer_id) {
+		//todo: create connection with display manager and ask for creating a window.
 		assert(receiver);
-		auto hwnd = FindWindow(
-			WNDCLASS_NAME,
-			WND_NAME
-		);
+		const auto info = get_parent_wnd(renderer_id);
+		auto hwnd = find_child_window(to_wstring(info.first).c_str(),
+			to_wstring(info.second).c_str(), to_wstring(renderer_id).c_str());
+		
 		assert(hwnd);//rendering application with window should be running
 		if (hwnd == nullptr) return false;
 		auto frame_receiver = detail::get_frame_receiver(hwnd, grt::get_renderer());
@@ -54,7 +77,11 @@ namespace util {
 		return true;
 	}
 
-	HWND 
+	void async_set_video_renderer(grt::video_track_receiver* receiver, std::string const& renderer_id) {
+		std::thread{ set_video_renderer, receiver, renderer_id }.detach();
+	}
+
+	HWND
 		create_rendering_window(HINSTANCE hInstance, WNDPROC wndproc) {
 		WNDCLASS wc = { };
 
@@ -82,4 +109,6 @@ namespace util {
 		);
 		return hwnd;
 	}
-}
+
+	
+}//namespace util
