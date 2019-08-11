@@ -11,6 +11,15 @@ namespace grt {
 	media_soup_conference_handler::media_soup_conference_handler(grt::signaller* signaller)
 		:signaller_{ signaller } {
 		assert(signaller_);
+		auto future_ = sender_.sync_connect(RENDERING_SERVER_IP, RENDERING_SERVER_PORT);
+
+		std::thread{ [future = std::move(future_)]()mutable{
+			//todo: FIXMe this has to be fixed. and it is run time check as well for error case
+			auto status = future.wait_for(std::chrono::seconds(5));
+			assert(status != std::future_status::timeout);
+			const auto connection_status = future.get();
+			assert(connection_status);
+		} }.detach();
 	}
 
 	void media_soup_conference_handler::on_message(grt::message_type type, absl::any msg){
@@ -109,7 +118,7 @@ namespace grt {
 			const std::string kind = m["kind"];
 			assert(consumer_transport_);
 
-			const auto r = consumers_.emplace(peerId, std::make_unique< consumer_handler>());
+			const auto r = consumers_.emplace(peerId, std::make_unique< consumer_handler>(&sender_));
 			assert(r.second);//insertion should have hapened
 
 			auto* consumer = consumer_transport_->Consume(r.first->second.get(), m["id"], m["producerId"], kind,
@@ -179,7 +188,8 @@ namespace grt {
 
 	}
 
-	consumer_handler::consumer_handler() = default;
+	consumer_handler::consumer_handler(grt::sender* sender)
+		:sender_{ sender }{ assert(sender_); }
 
 	void consumer_handler::consumer(mediasoupclient::Consumer* consumer,
 		std::string const& kind) {
@@ -200,7 +210,8 @@ namespace grt {
 			assert(video_track);//todo: handle this to render 
 			//const auto r = util::set_video_renderer(video_receiver_.get());
 			//assert(r);
-			util::async_set_video_renderer(video_receiver_.get(), "anil");
+			auto const id = consumer->GetId();
+			util::async_set_video_renderer(video_receiver_.get(), sender_, id);
 		}
 		else
 			assert(false);

@@ -32,14 +32,6 @@ namespace util {
 	void async_join_room(std::string const room_id, std::string const user_name, std::string const server,
 		std::string const port, status_type status);
 
-	using wndInfo = std::tuple<std::string, std::string, std::string>;
-	using window_status = std::function<void(wndInfo)>;//std::packaged_task< void(wndInfo)>;
-	void async_create_rendering_window(std::string const id, std::string const server, std::string const port,
-		window_status status);
-
-	using remove_status = std::function<void(bool)>;
-	void async_remove_rendering_window(std::string const id, std::string const server, std::string const port,
-		remove_status status);
 
 }//namespace util
 

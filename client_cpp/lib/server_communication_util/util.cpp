@@ -191,70 +191,6 @@ namespace util {
 			return nullptr;
 		}
 
-		wndInfo
-			rendering_wnd_info(std::string const id, std::string const server, std::string port) {
-			std::promise<grt::wnd_create_res> promise;
-			auto future = promise.get_future();
-
-			auto signaller = std::make_unique< grt::websocket_signaller>();
-			//grt::websocket_signaller signaller;
-			auto signalling_callback = make_unique(signaller.get(), [&signaller, id]() {
-				const auto m = grt::make_render_wnd_req(id);
-				signaller->send(m);
-			}, [&promise](grt::message_type type, absl::any msg, auto ptr) {
-				if (grt::message_type::window_create_res == type) {
-
-					auto const result = absl::any_cast<grt::wnd_create_res>(msg);
-					
-					//delete ptr;//improve this design
-					promise.set_value(result);
-					std::cout << "after promise set\n";
-				}
-			});
-			
-			signaller->connect(server, port, std::move(signalling_callback));
-
-
-			const auto r = future.get();
-			signaller->disconnect();
-			if (r.status_) {
-				return std::make_tuple(r.class_name_, r.parent_wnd_name_, r.child_wnd_id_);
-			}
-			
-			return {};
-		}
-
-		bool 
-			send_rending_wnd_close_req(std::string const id, std::string const server, std::string port) {
-			std::promise<bool> promise;
-			auto future = promise.get_future();
-
-			auto signaller = std::make_unique< grt::websocket_signaller>();
-			//grt::websocket_signaller signaller;
-			auto signalling_callback = make_unique(signaller.get(), [&signaller, id]() {
-
-				const auto m = grt::make_render_wnd_close_req(id);
-				signaller->send(m);
-			}, [&promise](grt::message_type type, absl::any msg, auto ptr) {
-				if (grt::message_type::wnd_close_req_res == type) {
-
-					auto const result = absl::any_cast<bool>(msg);
-
-					//delete ptr;//improve this design
-					promise.set_value(result);
-					std::cout << "after promise set\n";
-				}
-			});
-
-			signaller->connect(server, port, std::move(signalling_callback));
-
-
-			const auto r = future.get();
-			signaller->disconnect();
-			return r;
-		}
-
-
 
 	}//namespace internal
 
@@ -299,17 +235,4 @@ namespace util {
 		>(status, internal::join_room_req, room_id, user_name, server, port);
 	}
 
-	void async_create_rendering_window(std::string const id, std::string const server, std::string const port,
-		window_status status) {
-			async_task_executor<
-			decltype(internal::rendering_wnd_info)
-			>(status, internal::rendering_wnd_info, id, server, port);
-	}
-
-	void async_remove_rendering_window(std::string const id, std::string const server, std::string const port,
-		remove_status status) {
-			async_task_executor<
-				decltype(internal::send_rending_wnd_close_req)
-			>(status, internal::send_rending_wnd_close_req, id, server, port);
-	}
 }//namespace util

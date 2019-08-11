@@ -7,7 +7,8 @@
 #include <future>
 #include "../lib/function_thread_handler/func_thread_handler.h"
 #include "websocket_signaller.h"
-
+constexpr const char* RENDERING_SERVER_IP = "localhost";
+constexpr const char* RENDERING_SERVER_PORT = "8002";
 namespace grt {
 
 	using function_callback = std::function<void(message_type, absl::any msg)>;

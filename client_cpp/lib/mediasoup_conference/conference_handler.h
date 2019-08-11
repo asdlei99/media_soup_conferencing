@@ -4,6 +4,7 @@
 #include <mediasoup/include/mediasoupclient.hpp>
 #include "json_parser.h"
 #include "media_receiver/video_receiver/video_track_receiver.h"
+#include "server_communication_util/rendering_server_client.h"
 
 namespace grt {
 	class signaller;
@@ -13,9 +14,10 @@ namespace grt {
 		std::unique_ptr<mediasoupclient::Consumer> audioConsumer_;
 		std::unique_ptr<mediasoupclient::Consumer> videoConsumer_;
 		std::unique_ptr< video_track_receiver> video_receiver_;
+		grt::sender* sender_{ nullptr };
 	
 	public:
-		consumer_handler();
+		consumer_handler(grt::sender*);
 
 		void consumer(mediasoupclient::Consumer* consumer, std::string const& kind);
 
@@ -41,7 +43,7 @@ namespace grt {
 			std::unique_ptr<consumer_handler> > consumers_;
 		std::unique_ptr<mediasoupclient::RecvTransport> consumer_transport_;
 		std::promise<void> consumer_transport_connect_response_;
-
+		sender sender_;
 
 	public:
 		media_soup_conference_handler(grt::signaller* signaller);
