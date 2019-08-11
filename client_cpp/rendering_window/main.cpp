@@ -129,7 +129,7 @@ void server_handler::on_message(grt::message_type type, absl::any msg) {
 			//todo return failure
 			const auto m = grt::make_render_wnd_req_res(false, std::string{}, std::string{}, std::string{}, id);
 			func_object_.dispatch(UI_SERVER_ID, m);
-			availabl_wnds_.add(ptr);//add back window
+			if(ptr) availabl_wnds_.add(ptr);//add back window
 			return;
 		}
 		assert(ptr);

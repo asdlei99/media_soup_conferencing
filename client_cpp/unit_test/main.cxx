@@ -57,163 +57,96 @@ void test_window(grt::message_type type, absl::any msg, std::string command_id, 
 	//res();
 }
 
-void create_window_test(grt::signaller* signaller, std::shared_ptr<grt::rendering_server_client> client, std::string id
-					, bool const passTest = true) {
-	{
-		std::promise<void> done;
-		auto done_future = done.get_future();
-		client->register_function(id, [&done, id, passTest](auto type, auto msg) {
-			test_window(type, msg, id, passTest);
-			done.set_value();
-
-		});
-
-		const auto m = grt::make_render_wnd_req(id);
-		signaller->send(m);
-
-		done_future.get();//wait for event.
-		client->unregister_function(id);
-	}
-}
-
-void close_window_test(grt::signaller* signaller, std::shared_ptr<grt::rendering_server_client> client, std::string id,
-	const bool passTest = true) {
-	std::promise<void> wait_event;
-	auto wait = wait_event.get_future();
-	client->register_function(id, [&wait_event, id, passTest](auto type, auto msg) {
-		assert(type == grt::message_type::wnd_close_req_res);
-		auto result = absl::any_cast<std::pair<bool, std::string>>(msg);
-		
-		REQUIRE(result.second == id);
-		if(passTest) REQUIRE(result.first);
-		else REQUIRE_FALSE(result.first);
-		wait_event.set_value();
-
+void create_window_test(grt::sender* sender, std::string id
+	, bool const passTest = true) {
+	const auto m = grt::make_render_wnd_req(id);
+	std::promise<void> done;
+	auto done_future = done.get_future();
+	sender->send_to_renderer(id, m, [&done, id, passTest](auto type, auto msg){
+		test_window(type, msg, id, passTest);
+		done.set_value();
 	});
 
-	const auto m = grt::make_render_wnd_close_req(id);
-	signaller->send(m);
-	wait.get();//wait for event;
-	client->unregister_function(id);
+	done_future.get();//wait for event.
+	sender->done(id);
 }
 
+void close_window_test(grt::sender* sender, std::string id
+	, bool const passTest = true) {
+	const auto m = grt::make_render_wnd_close_req(id);
+	std::promise<void> done;
+	auto wait = done.get_future();
+	sender->send_to_renderer(id, m, [&done, id, passTest](auto type, auto msg) {
+		assert(type == grt::message_type::wnd_close_req_res);
+		auto result = absl::any_cast<std::pair<bool, std::string>>(msg);
 
+		REQUIRE(result.second == id);
+		if (passTest) REQUIRE(result.first);
+		else REQUIRE_FALSE(result.first);
+		done.set_value();
+	});
+
+	wait.get();//wait for event.
+	sender->done(id);
+}
 
 TEST_CASE("server connection test", "[local_rendering_server]") {
-	
-	grt::websocket_signaller signaller;
-	auto client = std::make_shared<grt::rendering_server_client>();
 
-	std::promise<bool> connect_event;
-	auto future = connect_event.get_future();
-
-	client->set_connect_event(std::move(connect_event));
-	
-	signaller.connect("localhost", "8002", client);
-
-	auto connect_status = future.get();
-	REQUIRE(connect_status);
-
-	create_window_test(&signaller, client, "Anil");
-	
-	signaller.disconnect();
-
+	grt::sender sender;
+	auto future = sender.sync_connect("localhost", "8002");
+	auto is_connected = future.get();
+	REQUIRE(is_connected);
+	create_window_test(&sender, "Anil");
 }
 
 ////
 TEST_CASE("rendering wind multiple create", "[local_rendering_server]") {
-	grt::websocket_signaller signaller;
-	auto client = std::make_shared<grt::rendering_server_client>();
-	
-	
-	std::promise<bool> connect_event;
-	auto future = connect_event.get_future();
+	grt::sender sender;
+	auto future = sender.sync_connect("localhost", "8002");
+	auto is_connected = future.get();
+	REQUIRE(is_connected);
 
-	client->set_connect_event(std::move(connect_event));
-
-	//signaller.set_callback(client);
-	signaller.connect("localhost", "8002", client);
-
-	auto connect_status = future.get();
-	REQUIRE(connect_status);
-
-	create_window_test(&signaller, client, "Anil", false);//test failure 
-	
-	signaller.disconnect();
+	create_window_test(&sender, "Anil", false);//failure test
 }
 
 TEST_CASE("rendering close test", "[local_rendering_server]") {
-	grt::websocket_signaller signaller;
-	auto client = std::make_shared<grt::rendering_server_client>();
-	
-	{
-		std::promise<bool> connect_event;
-		auto future = connect_event.get_future();
-
-		client->set_connect_event(std::move(connect_event));
-
-		//signaller.set_callback(client);
-		signaller.connect("localhost", "8002", client);
-
-		future.get();//WAIT FOR EVENT
-		
-	}
-	close_window_test(&signaller, client, "Anil");
-
-	signaller.disconnect();
-	
+	grt::sender sender;
+	auto future = sender.sync_connect("localhost", "8002");
+	auto is_connected = future.get();
+	REQUIRE(is_connected);
+	close_window_test(&sender, "Anil");
 }
 //
 TEST_CASE("rendering close non existing", "[local_rendering_server]") {
-	grt::websocket_signaller signaller;
-	auto client = std::make_shared<grt::rendering_server_client>();
-	
-		std::promise<bool> connect_event;
-		auto future = connect_event.get_future();
-		client->set_connect_event(std::move(connect_event));
-		signaller.connect("localhost", "8002", client);
-
-		future.get();//WAIT FOR connect
-	
-		close_window_test(&signaller, client, "Anil", false); //failure test
-		
-	
-	signaller.disconnect();
-	
+	grt::sender sender;
+	auto future = sender.sync_connect("localhost", "8002");
+	auto is_connected = future.get();
+	REQUIRE(is_connected);
+	close_window_test(&sender, "Anil", false);//test failure
 }
-
-
+//
+//
 TEST_CASE("render window maximum possible test", "[local_rendering_server]") {
-	
-	grt::websocket_signaller signaller;
-	auto client = std::make_shared<grt::rendering_server_client>();
-	//const std::string my_id = "Anil";
-	
-	std::promise<bool> connect_event;
-	auto future = connect_event.get_future();
 
-	client->set_connect_event(std::move(connect_event));
+	grt::sender sender;
+	auto future = sender.sync_connect("localhost", "8002");
+	auto is_connected = future.get();
+	REQUIRE(is_connected);
 
-	signaller.connect("localhost", "8002", client);
+	create_window_test(&sender, "one");
+	create_window_test(&sender, "two");
+	create_window_test(&sender, "three");
+	create_window_test(&sender, "four");
+	create_window_test(&sender, "five");
+	create_window_test(&sender, "six");
+	create_window_test(&sender, "seven", false);
 
-	auto connect_status = future.get();
-	REQUIRE(connect_status);
+	close_window_test(&sender, "one");
+	close_window_test(&sender, "two");
+	close_window_test(&sender, "three");
+	close_window_test(&sender, "four");
+	close_window_test(&sender, "five");
+	close_window_test(&sender, "six");
+	close_window_test(&sender, "seven", false);
 
-	create_window_test(&signaller, client, "one");
-	create_window_test(&signaller, client, "two");
-	create_window_test(&signaller, client, "three");
-	create_window_test(&signaller, client, "four");
-	create_window_test(&signaller, client, "five");
-	create_window_test(&signaller, client, "six");
-	create_window_test(&signaller, client, "seven", false);
-
-	close_window_test(&signaller, client, "one");
-	close_window_test(&signaller, client, "two");
-	close_window_test(&signaller, client, "three");
-	close_window_test(&signaller, client, "four");
-	close_window_test(&signaller, client, "five");
-	close_window_test(&signaller, client, "six");
-	close_window_test(&signaller, client, "seven", false);
-
-	signaller.disconnect();
 }

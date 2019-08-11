@@ -7,9 +7,11 @@
 #include <mutex>
 
 
-constexpr const char* UI_SERVER_ID = "websocket_server";
+constexpr const char* UI_SERVER_ID = "websocket_server"; //todo rename these properly
 constexpr const char* UI_COMMUNICATROR_ID = "ui_id";
 constexpr const char* REC_ID = "receiver_id";//this id is for getting UI messages from server.
+
+constexpr const char* SENDER_ID = "sender";
 
 namespace util {
 	class func_thread_handler {

@@ -40,6 +40,7 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	signaller
 	json_parser
 	windows_util
+	func_thread_handler
 	)
 #[==[
 #	sdptransform
