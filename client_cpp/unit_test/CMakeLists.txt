@@ -27,10 +27,19 @@ endif()
 target_include_directories(${EXE_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/catch)
 
 
+target_link_directories( ${EXE_NAME} PUBLIC
+	$<BUILD_INTERFACE:${BOOST_LIB}/stage/lib>
+)
+
 
 # Public (interface) dependencies.
 target_link_libraries(${EXE_NAME} PUBLIC
 	display_manager
+
+	server_communication_util
+	signaller
+	json_parser
+	windows_util
 	)
 #[==[
 #	sdptransform

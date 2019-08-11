@@ -5,8 +5,8 @@ add_library(mediasoup_conference
 	mediasoup_conference.h
 	mediasoup_conference.cpp
 	room.h
-	util.h
-	util.cpp
+#	util.h
+#	util.cpp
 	room_impl.h
 	room_impl.cpp
 	conference_handler.h 

@@ -7,7 +7,7 @@ namespace display {
 	
 	class window_creator {
 	public:
-		virtual window* create_window( const wchar_t* wnd_name) = 0;
+		virtual window* create_window( std::string wnd_name) = 0;
 		virtual HWND get_handle() = 0;
 	};
 

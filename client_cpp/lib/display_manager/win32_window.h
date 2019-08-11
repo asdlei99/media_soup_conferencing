@@ -9,13 +9,15 @@ namespace display {
 
 	class win32_window :public window {
 	public:
-		win32_window(HWND handle);
+		win32_window(HWND handle, std::string name);
 		~win32_window();
 		void reposition(int x, int y, int w, int h) override;
-
+		HWND get_handle() const override {return hwnd_;}
+		std::string get_window_name() const override { return name_; }
 
 	private:
 		HWND hwnd_;
+		const std::string name_;
 	};
 
 	std::pair<int, int>

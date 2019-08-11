@@ -44,6 +44,8 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	display_manager
 	websocket_server
 	func_thread_handler
+	json_parser
+	#media_render_util
 #	sdptransform
 #[==[
 	${LIBWEBRTC_BINARY_PATH}/webrtc${CMAKE_STATIC_LIBRARY_SUFFIX}

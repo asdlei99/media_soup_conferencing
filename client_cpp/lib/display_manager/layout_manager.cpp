@@ -1,4 +1,5 @@
 #include "layout_manager.h"
+#include <algorithm>
 
 namespace display {
 	layout_manager::layout_manager(int width, int height, int aspect_w, int aspect_h) : 
@@ -12,7 +13,10 @@ namespace display {
 	
 	void layout_manager::remove(window* child) {
 
-		int vector_index{ 0 };
+		auto iter = std::find(v_child_wind_.begin(), v_child_wind_.end(), child);
+		v_child_wind_.erase(iter);
+		reposition();
+		/*int vector_index{ 0 };
 		for (const auto& i : v_child_wind_) {
 			if (child == i) {				
 				v_child_wind_.erase(v_child_wind_.begin() + vector_index);
@@ -21,7 +25,7 @@ namespace display {
 				break;
 			}
 			vector_index++;
-		}
+		}*/
 	}
 
 	void layout_manager::reposition() {

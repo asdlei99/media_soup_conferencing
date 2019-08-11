@@ -3,7 +3,8 @@
 
 namespace display {
 
-	win32_window::win32_window(HWND handle) :hwnd_{handle} {
+	win32_window::win32_window(HWND handle, std::string name) 
+		:hwnd_{ handle }, name_{ name } {
 		
 	}
 
@@ -12,7 +13,7 @@ namespace display {
 	}
 
 	void win32_window::reposition(int x, int y, int w, int h) {
-		int ret = SetWindowPos(
+		const auto ret = SetWindowPos(
 			hwnd_,
 			HWND_TOP,
 			x,
@@ -21,6 +22,7 @@ namespace display {
 			h,
 			SWP_SHOWWINDOW
 		);
+		assert(ret);
 		ShowWindow(hwnd_, SW_SHOWNORMAL);
 	}
 

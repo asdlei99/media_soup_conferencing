@@ -11,7 +11,7 @@ namespace display {
 		create_win32_window(int width, int height, HINSTANCE instance, const wchar_t* wnd_name, const wchar_t* class_name);
 		~create_win32_window();
 
-		window* create_window(const wchar_t* wnd_name) override;
+		window* create_window(std::string wnd_name) override;
 		HWND get_handle() override;
 
 	private:

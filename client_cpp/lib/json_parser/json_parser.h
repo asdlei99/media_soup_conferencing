@@ -68,6 +68,13 @@ namespace grt {
 	std::string make_consumer_resume_req(std::string id);
 	std::string make_consumer_trasport_connect_req(std::string transport_id,
 		json const& dtls_parameters);
+
+	std::string make_render_wnd_req(std::string const id);
+	std::string make_render_wnd_req_res(bool is_ok, std::string class_name, std::string parent_wnd_name, std::string id, std::string sender_id);
+
+	std::string make_render_wnd_close_req(std::string const id);
+	std::string make_render_wnd_close_res(bool is_ok, std::string const id);
+
 	std::string make_register_user_res(std::string id, bool okay);
 	std::string create_ice_servers_req(std::string id);
 	

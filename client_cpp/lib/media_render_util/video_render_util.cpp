@@ -3,6 +3,8 @@
 #include <cassert>
 #include "video_render/renderer.h"
 #include <thread>
+#include "server_communication_util/util.h"
+#include "windows_util/windows_util.h"
 
 constexpr const wchar_t* WNDCLASS_NAME = L"Sample Window Class";
 constexpr const wchar_t* WND_NAME = L"Learn to Program Windows";
@@ -43,19 +45,8 @@ namespace detail {
 
 namespace util {
 
-	HWND find_child_window(const wchar_t* className, const wchar_t* parent_wnd_name,
-		const wchar_t* child_wnd_name) {
-		auto parentWnd = FindWindow(className, parent_wnd_name);
-		assert(parentWnd);
-		if (parentWnd == nullptr) return nullptr;
-		auto wnd = FindWindowEx(parentWnd, nullptr, className, child_wnd_name);
-		assert(wnd);
-		return wnd;
-	}
-
-	std::wstring to_wstring(std::string v) {
-		return std::wstring(v.begin(), v.end());
-	}
+	
+	
 
 	std::pair<std::string, std::string>
 		get_parent_wnd(std::string const& render_id) {
@@ -63,12 +54,12 @@ namespace util {
 	}
 
 
-	bool set_video_renderer(grt::video_track_receiver* receiver, std::string const& renderer_id) {
+	bool set_video_renderer(grt::video_track_receiver* receiver, std::string class_name, 
+		std::string parent_name, std::string  renderer_id) {
 		//todo: create connection with display manager and ask for creating a window.
 		assert(receiver);
-		const auto info = get_parent_wnd(renderer_id);
-		auto hwnd = find_child_window(to_wstring(info.first).c_str(),
-			to_wstring(info.second).c_str(), to_wstring(renderer_id).c_str());
+
+		auto hwnd = find_child_window(class_name, parent_name, renderer_id);
 		
 		assert(hwnd);//rendering application with window should be running
 		if (hwnd == nullptr) return false;
@@ -78,8 +69,17 @@ namespace util {
 	}
 
 	void async_set_video_renderer(grt::video_track_receiver* receiver, std::string const& renderer_id) {
-		std::thread{ set_video_renderer, receiver, renderer_id }.detach();
+		util::async_create_rendering_window(renderer_id, "localhost", "8002",
+			[receiver](wndInfo windInfo) {
+			set_video_renderer(receiver, std::get<0>(windInfo), std::get<1>(windInfo), std::get<2>(windInfo));
+		});
+		//std::thread{ set_video_renderer, receiver, renderer_id }.detach();
 	}
+
+	/*std::future<std::tuple<std::string, std::string, std::string>>
+		async_get_rendeing_window_info(std::string server_ip, std::string server_port, std::string id) {
+
+	}*/
 
 	HWND
 		create_rendering_window(HINSTANCE hInstance, WNDPROC wndproc) {

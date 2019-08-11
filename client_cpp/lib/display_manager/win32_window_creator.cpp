@@ -40,15 +40,15 @@ namespace display {
 		return parent_window_;
 	}
 
-	window* create_win32_window::create_window(const wchar_t* wnd_name) {
-		HWND child_window = CreateWindowEx(0, class_name_, wnd_name, WS_CHILD | WS_BORDER,
+	window* create_win32_window::create_window(std::string wnd_name) {
+		HWND child_window = CreateWindowEx(0, class_name_, std::wstring{ wnd_name.begin(), wnd_name.end() }.c_str(), WS_CHILD | WS_BORDER,
 			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, parent_window_, (HMENU)(int)(0), instance_, NULL);
 
 		if (!child_window) {
 			assert(false);
 			return nullptr;
 		}
-		return new win32_window(child_window);
+		return new win32_window{ child_window, wnd_name };
 
 	}
 	
