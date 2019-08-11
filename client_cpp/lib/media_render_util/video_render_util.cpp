@@ -74,5 +74,13 @@ namespace util {
 		});
 	}
 
+	void async_reset_video_renderer(grt::sender* sender, std::string const& id) {
+		const auto m = grt::make_render_wnd_close_req(id);
+		sender->send_to_renderer(id, m, [id, sender](auto type, auto msg) {
+			assert(type == grt::message_type::wnd_close_req_res);
+			sender->done(id);
+		});
+	}
+
 	
 }//namespace util

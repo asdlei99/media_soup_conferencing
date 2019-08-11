@@ -16,7 +16,7 @@ namespace grt {
 		std::thread{ [future = std::move(future_)]()mutable{
 			//todo: FIXMe this has to be fixed. and it is run time check as well for error case
 			auto status = future.wait_for(std::chrono::seconds(5));
-			assert(status != std::future_status::timeout);
+			assert(status != std::future_status::timeout); //if it crashes here, it means renderer is not running
 			const auto connection_status = future.get();
 			assert(connection_status);
 		} }.detach();
