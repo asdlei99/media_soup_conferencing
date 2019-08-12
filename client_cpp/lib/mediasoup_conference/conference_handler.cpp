@@ -108,6 +108,10 @@ namespace grt {
 			const auto m = grt::make_consume_req(peer_id, device_.GetRtpCapabilities());
 			signaller_->send(m);
 		}
+		else if (grt::message_type::peer_remove == type) {
+			const auto peer_id = absl::any_cast<std::string>(msg);
+			consumers_.erase(peer_id);
+		}
 		else if (grt::message_type::consumer_res == type) {
 			const auto m = absl::any_cast<json>(msg);
 			//const std::string id = m["id"];
@@ -179,7 +183,7 @@ namespace grt {
 	void
 		media_soup_conference_handler::OnConnectionStateChange(mediasoupclient::Transport* transport,
 			const std::string& connectionState) {
-
+		std::cout << "connectin state change " << connectionState << " id =" << transport->GetId() << '\n';
 	}
 
 	//Producer::Listener interfaces
@@ -190,6 +194,13 @@ namespace grt {
 
 	consumer_handler::consumer_handler(grt::sender* sender)
 		:sender_{ sender }{ assert(sender_); }
+
+	consumer_handler::~consumer_handler() {
+		if (audioConsumer_)
+			audioConsumer_->Close();
+		if (videoConsumer_)
+			videoConsumer_->Close();
+	}
 
 	void consumer_handler::consumer(mediasoupclient::Consumer* consumer,
 		std::string const& kind) {
@@ -211,6 +222,7 @@ namespace grt {
 			//const auto r = util::set_video_renderer(video_receiver_.get());
 			//assert(r);
 			auto const id = consumer->GetId();
+			std::cout << "video renderer id " << id << '\n';
 			util::async_set_video_renderer(video_receiver_.get(), sender_, id);
 		}
 		else
@@ -218,7 +230,9 @@ namespace grt {
 	}
 
 	//consumer::Listener interfaces
-	void consumer_handler::OnTransportClose(mediasoupclient::Consumer* consumer) {}
+	void consumer_handler::OnTransportClose(mediasoupclient::Consumer* consumer) {
+		std::cout << "transport close " << consumer->GetId() << '\n';
+	}
 
 
 }//namespace grt

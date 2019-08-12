@@ -18,6 +18,7 @@ namespace grt {
 	
 	public:
 		consumer_handler(grt::sender*);
+		~consumer_handler();
 
 		void consumer(mediasoupclient::Consumer* consumer, std::string const& kind);
 

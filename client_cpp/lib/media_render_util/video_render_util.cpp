@@ -14,18 +14,27 @@ namespace detail {
 	private:
 		std::shared_ptr<grt::renderer> renderer_;
 		HWND hwnd_;
+		const std::string id_;
+		grt::sender* sender_{ nullptr };
+
 	public:
-		video_receiver(HWND hwnd, std::unique_ptr< grt::renderer>&& render)
-			:renderer_{ std::move(render) }, hwnd_{ hwnd }{
+		video_receiver(HWND hwnd, std::unique_ptr< grt::renderer>&& render, std::string id, grt::sender* sender)
+			:renderer_{ std::move(render) }, hwnd_{ hwnd }, id_{ id }, sender_{ sender }{
 			auto r = SetWindowPos(hwnd_, HWND_TOPMOST,
 				0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOSIZE);
 			assert(r != 0);
+			assert(sender_);
+			assert(!id_.empty());
 		}
 
 		~video_receiver() {
 
-			auto r = ShowWindow(hwnd_, SW_HIDE);
-			assert(r != 0);//it shows it was previously shown
+			//auto r = ShowWindow(hwnd_, SW_HIDE);
+			//assert(r != 0);//it shows it was previously shown
+			const auto m = grt::make_render_wnd_close_req(id_);
+		//	auto sender = sender_;
+			sender_->send_to_renderer(id_, m, [sender = this->sender_, id = this->id_](auto type, auto msg) { sender->done(id); });
+
 		}
 		void on_frame(grt::yuv_frame frame) override {
 			auto frame_info = grt::make_frame_info(
@@ -38,15 +47,15 @@ namespace detail {
 
 
 	std::unique_ptr< grt::video_frame_callback>
-		get_frame_receiver(HWND hwnd, std::unique_ptr< grt::renderer>&& render) {
-		return std::make_unique< video_receiver>(hwnd, std::move(render));
+		get_frame_receiver(HWND hwnd, std::unique_ptr< grt::renderer>&& render, std::string id, grt::sender* sender) {
+		return std::make_unique< video_receiver>(hwnd, std::move(render), id, sender);
 	}
 }
 
 namespace util {
 
 	bool set_video_renderer(grt::video_track_receiver* receiver, std::string class_name, 
-		std::string parent_name, std::string  renderer_id) {
+		std::string parent_name, std::string  renderer_id, grt::sender* sender, std::string id) {
 		//todo: create connection with display manager and ask for creating a window.
 		assert(receiver);
 
@@ -54,7 +63,7 @@ namespace util {
 		
 		assert(hwnd);//rendering application with window should be running
 		if (hwnd == nullptr) return false;
-		auto frame_receiver = detail::get_frame_receiver(hwnd, grt::get_renderer());
+		auto frame_receiver = detail::get_frame_receiver(hwnd, grt::get_renderer(), id, sender);
 		receiver->register_callback(std::move(frame_receiver));
 		return true;
 	}
@@ -69,7 +78,7 @@ namespace util {
 			const auto wndName = wndInfo.parent_wnd_name_;
 			const auto wndId = wndInfo.child_wnd_id_;
 		
-			set_video_renderer(recevier, className, wndName, wndId);
+			set_video_renderer(recevier, className, wndName, wndId, sender, id);
 			sender->done(id);
 		});
 	}

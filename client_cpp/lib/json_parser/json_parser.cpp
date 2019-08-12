@@ -369,6 +369,11 @@ namespace grt {
 
 				caller->on_message(message_type::wnd_close_req_res, std::make_pair(status, id));
 			}
+			else if (type == "peer_remove") {
+				const std::string id = json_msg[PEER_MSG_KEY];
+				caller->on_message(message_type::peer_remove, id);
+				//todo : handle this case.
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
