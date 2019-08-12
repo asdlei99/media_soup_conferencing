@@ -1,28 +1,40 @@
 #include "video_render_util.h"
-#include <Windows.h>
 #include <cassert>
 #include "video_render/renderer.h"
+#include <thread>
+#include "server_communication_util/util.h"
+#include "windows_util/windows_util.h"
+#include "json_parser.h"
+#include "server_communication_util/rendering_server_client.h"
+#include "media_receiver/video_receiver/video_track_receiver.h"
 
-constexpr const wchar_t* WNDCLASS_NAME = L"Sample Window Class";
-constexpr const wchar_t* WND_NAME = L"Learn to Program Windows";
 namespace detail {
 
 	class video_receiver : public grt::video_frame_callback {
 	private:
 		std::shared_ptr<grt::renderer> renderer_;
 		HWND hwnd_;
+		const std::string id_;
+		grt::sender* sender_{ nullptr };
+
 	public:
-		video_receiver(HWND hwnd, std::unique_ptr< grt::renderer>&& render)
-			:renderer_{ std::move(render) }, hwnd_{ hwnd }{
+		video_receiver(HWND hwnd, std::unique_ptr< grt::renderer>&& render, std::string id, grt::sender* sender)
+			:renderer_{ std::move(render) }, hwnd_{ hwnd }, id_{ id }, sender_{ sender }{
 			auto r = SetWindowPos(hwnd_, HWND_TOPMOST,
 				0, 0, 0, 0, SWP_SHOWWINDOW | SWP_NOSIZE);
 			assert(r != 0);
+			assert(sender_);
+			assert(!id_.empty());
 		}
 
 		~video_receiver() {
 
-			auto r = ShowWindow(hwnd_, SW_HIDE);
-			assert(r != 0);//it shows it was previously shown
+			//auto r = ShowWindow(hwnd_, SW_HIDE);
+			//assert(r != 0);//it shows it was previously shown
+			const auto m = grt::make_render_wnd_close_req(id_);
+		//	auto sender = sender_;
+			sender_->send_to_renderer(id_, m, [sender = this->sender_, id = this->id_](auto type, auto msg) { sender->done(id); });
+
 		}
 		void on_frame(grt::yuv_frame frame) override {
 			auto frame_info = grt::make_frame_info(
@@ -35,51 +47,49 @@ namespace detail {
 
 
 	std::unique_ptr< grt::video_frame_callback>
-		get_frame_receiver(HWND hwnd, std::unique_ptr< grt::renderer>&& render) {
-		return std::make_unique< video_receiver>(hwnd, std::move(render));
+		get_frame_receiver(HWND hwnd, std::unique_ptr< grt::renderer>&& render, std::string id, grt::sender* sender) {
+		return std::make_unique< video_receiver>(hwnd, std::move(render), id, sender);
 	}
 }
 
 namespace util {
-	bool set_video_renderer(grt::video_track_receiver* receiver) {
+
+	bool set_video_renderer(grt::video_track_receiver* receiver, std::string class_name, 
+		std::string parent_name, std::string  renderer_id, grt::sender* sender, std::string id) {
+		//todo: create connection with display manager and ask for creating a window.
 		assert(receiver);
-		auto hwnd = FindWindow(
-			WNDCLASS_NAME,
-			WND_NAME
-		);
+
+		auto hwnd = find_child_window(class_name, parent_name, renderer_id);
+		
 		assert(hwnd);//rendering application with window should be running
 		if (hwnd == nullptr) return false;
-		auto frame_receiver = detail::get_frame_receiver(hwnd, grt::get_renderer());
+		auto frame_receiver = detail::get_frame_receiver(hwnd, grt::get_renderer(), id, sender);
 		receiver->register_callback(std::move(frame_receiver));
 		return true;
 	}
 
-	HWND 
-		create_rendering_window(HINSTANCE hInstance, WNDPROC wndproc) {
-		WNDCLASS wc = { };
-
-		wc.lpfnWndProc = wndproc;
-		wc.hInstance = hInstance;
-		wc.lpszClassName = WNDCLASS_NAME;
-
-		RegisterClass(&wc);
-
-		// Create the window.
-
-		HWND hwnd = CreateWindowEx(
-			0,                              // Optional window styles.
-			WNDCLASS_NAME,                     // Window class
-			WND_NAME,    // Window text
-			WS_OVERLAPPEDWINDOW,            // Window style
-
-			// Size and position
-			CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT,
-
-			NULL,       // Parent window    
-			NULL,       // Menu
-			hInstance,  // Instance handle
-			NULL        // Additional application data
-		);
-		return hwnd;
+	void async_set_video_renderer(grt::video_track_receiver* recevier, grt::sender* sender, std::string const& id) {
+		const auto m = grt::make_render_wnd_req(id);
+		sender->send_to_renderer(id, m, [recevier, sender, id](grt::message_type type, absl::any msg) {
+			assert(type == grt::message_type::window_create_res);
+			auto wndInfo = absl::any_cast<grt::wnd_create_res>(msg);
+			assert(wndInfo.status_);
+			const auto className = wndInfo.class_name_;
+			const auto wndName = wndInfo.parent_wnd_name_;
+			const auto wndId = wndInfo.child_wnd_id_;
+		
+			set_video_renderer(recevier, className, wndName, wndId, sender, id);
+			sender->done(id);
+		});
 	}
-}
+
+	void async_reset_video_renderer(grt::sender* sender, std::string const& id) {
+		const auto m = grt::make_render_wnd_close_req(id);
+		sender->send_to_renderer(id, m, [id, sender](auto type, auto msg) {
+			assert(type == grt::message_type::wnd_close_req_res);
+			sender->done(id);
+		});
+	}
+
+	
+}//namespace util

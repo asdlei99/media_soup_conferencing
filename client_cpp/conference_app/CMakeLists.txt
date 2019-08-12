@@ -60,6 +60,8 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	video_render
 	d3d9
 	media_render_util
+	server_communication_util
+	windows_util
 #amstrmid.lib
 #crypt32.lib
 #iphlpapi.lib

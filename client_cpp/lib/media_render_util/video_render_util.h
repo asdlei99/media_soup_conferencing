@@ -1,10 +1,14 @@
 #ifndef _VIDEO_RENDER_UTIL_H__
 #define _VIDEO_RENDER_UTIL_H__
-#include "media_receiver/video_receiver/video_track_receiver.h"
-#include <Windows.h>
+#include <string>
+
+namespace grt {
+	class sender;
+	class video_track_receiver;
+}
 namespace util {
-	bool set_video_renderer(grt::video_track_receiver*);
-	HWND create_rendering_window(HINSTANCE hInstance, WNDPROC wndproc);
+	void async_set_video_renderer(grt::video_track_receiver*, grt::sender* sender, std::string const& id);
+	void async_reset_video_renderer(grt::sender* sender, std::string const& id);
 }
 
 

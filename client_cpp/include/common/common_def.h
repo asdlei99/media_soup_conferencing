@@ -35,6 +35,10 @@ namespace grt {
 		peer_remove,
 		consumer_res,
 		consumer_connect_res,
+		wnd_create_req,
+		window_create_res,
+		wnd_close_req,
+		wnd_close_req_res,
 		invalid
 	};
 
@@ -99,6 +103,14 @@ namespace grt {
 	struct room_info {
 		std::string id_;
 		std::string name_;
+	};
+
+	struct wnd_create_res {
+		bool status_{ false };
+		std::string class_name_;
+		std::string parent_wnd_name_;
+		std::string child_wnd_id_;
+		std::string id;
 	};
 
 }//namespace grt

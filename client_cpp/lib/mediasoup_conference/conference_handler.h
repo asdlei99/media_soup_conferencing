@@ -4,36 +4,23 @@
 #include <mediasoup/include/mediasoupclient.hpp>
 #include "json_parser.h"
 #include "media_receiver/video_receiver/video_track_receiver.h"
+#include "server_communication_util/rendering_server_client.h"
 
 namespace grt {
 	class signaller;
 
-	class consumer_handler : public mediasoupclient::RecvTransport::Listener
-		, public mediasoupclient::Consumer::Listener {
+	class consumer_handler : public mediasoupclient::Consumer::Listener {
 	private:
-		std::unique_ptr<mediasoupclient::RecvTransport> transport_;
 		std::unique_ptr<mediasoupclient::Consumer> audioConsumer_;
 		std::unique_ptr<mediasoupclient::Consumer> videoConsumer_;
-		signaller* signaller_{ nullptr };
-		std::promise<void> consumer_transport_connect_response_;
 		std::unique_ptr< video_track_receiver> video_receiver_;
+		grt::sender* sender_{ nullptr };
 	
 	public:
-		consumer_handler(grt::signaller* signaller);
+		consumer_handler(grt::sender*);
+		~consumer_handler();
 
-		void set_transport(mediasoupclient::RecvTransport* transport);
-
-		void consumer(json const& data);
-
-		void consumer_connect_res(bool status);
-
-		//RecvTransport::Listener
-		std::future<void>
-			OnConnect(mediasoupclient::Transport* transport,
-				const nlohmann::json& dtlsParameters) override;
-		void
-			OnConnectionStateChange(mediasoupclient::Transport* transport,
-				const std::string& connectionState) override;
+		void consumer(mediasoupclient::Consumer* consumer, std::string const& kind);
 
 		//consumer::Listener interfaces
 		void OnTransportClose(mediasoupclient::Consumer* consumer) override;
@@ -53,10 +40,11 @@ namespace grt {
 		std::unique_ptr<mediasoupclient::Producer> videoProducer_;
 		rtc::scoped_refptr<webrtc::VideoTrackInterface> videoTrack_;
 		std::promise<std::string> producer_response_;
-
-		std::unique_ptr< consumer_handler> consumer_handler_
-			= std::make_unique< consumer_handler>(signaller_);
-
+		std::map<std::string,
+			std::unique_ptr<consumer_handler> > consumers_;
+		std::unique_ptr<mediasoupclient::RecvTransport> consumer_transport_;
+		std::promise<void> consumer_transport_connect_response_;
+		sender sender_;
 
 	public:
 		media_soup_conference_handler(grt::signaller* signaller);

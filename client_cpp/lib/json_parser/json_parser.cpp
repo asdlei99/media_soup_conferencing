@@ -346,6 +346,34 @@ namespace grt {
 				});
 				caller->on_message(message_type::res_rooms_info, output);
 			}
+			else if (type == "create_wnd_req") {
+			const std::string m = json_msg[PEER_MSG_KEY];
+			caller->on_message(message_type::wnd_create_req, m);
+			}
+			else if (type == "create_wnd_req_res") {
+				const bool status = json_msg[STATUS];
+				const std::string class_name = json_msg["class_name"];
+				const std::string parent_wnd = json_msg["parent_wnd"];
+				const std::string child_wnd = json_msg["child_wnd"];
+				const std::string id = json_msg[ID];
+				grt::wnd_create_res const res{ status, class_name , parent_wnd, child_wnd, id };
+				caller->on_message(message_type::window_create_res, res);
+			}
+			else if (type == "wnd_close_req") {
+				const std::string id = json_msg[PEER_MSG_KEY];
+				caller->on_message(message_type::wnd_close_req, id);
+			}
+			else if (type == "wnd_close_req_res") {
+				const bool status = json_msg[STATUS];
+				const std::string id = json_msg[ID];
+
+				caller->on_message(message_type::wnd_close_req_res, std::make_pair(status, id));
+			}
+			else if (type == "peer_remove") {
+				const std::string id = json_msg[PEER_MSG_KEY];
+				caller->on_message(message_type::peer_remove, id);
+				//todo : handle this case.
+			}
 			else {
 				std::cout << "not supported msg = " << msg << "\n";
 				caller->on_error(msg, "not supported msg");
@@ -604,6 +632,45 @@ namespace grt {
 		{PEER_MSG_KEY, get_connect_consumer_msg(transport_id, dtls_parameters)}
 		};
 
+		return j2.dump();
+	}
+
+	std::string make_render_wnd_close_req(std::string const id) {
+		const json j2 = {
+			{TYPE, "wnd_close_req"},
+			{PEER_MSG_KEY, id}
+		};
+		return j2.dump();
+	}
+
+	std::string make_render_wnd_close_res(bool is_ok, std::string id) {
+		const json j2 = {
+			{TYPE, "wnd_close_req_res"},
+			{STATUS, is_ok},
+		{ID, id}
+		};
+		return j2.dump();
+	}
+
+	std::string make_render_wnd_req(std::string const id) {
+		const json j2 = {
+			{TYPE, "create_wnd_req"},
+			{PEER_MSG_KEY, id}
+		};
+		return j2.dump();
+	}
+
+	std::string 
+		make_render_wnd_req_res(bool is_ok, std::string class_name, std::string parent_wnd_name, std::string id,
+			std::string sender_id) {
+		const json j2 = {
+			{TYPE, "create_wnd_req_res"},
+		{STATUS, is_ok},
+		{"class_name", class_name},
+		{"parent_wnd", parent_wnd_name},
+		{"child_wnd", id},
+		{ID, sender_id}
+		};
 		return j2.dump();
 	}
 
