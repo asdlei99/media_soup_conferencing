@@ -2,3 +2,7 @@
 	path = client_cpp/lib/function_thread_handler
 	url = https://github.com/anil235476/func_thread_handler
 	branch = master
+[submodule "client_cpp/lib/json_parser"]
+	path = client_cpp/lib/json_parser
+	url = https://github.com/anil235476/json_parser
+	branch = master
