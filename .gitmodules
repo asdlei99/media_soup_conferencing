@@ -1,0 +1,4 @@
+[submodule "client_cpp/lib/function_thread_handler"]
+	path = client_cpp/lib/function_thread_handler
+	url = https://github.com/anil235476/func_thread_handler
+	branch = master
