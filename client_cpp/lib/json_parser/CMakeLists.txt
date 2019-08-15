@@ -10,7 +10,7 @@ add_library(json_parser
 
 target_include_directories(json_parser PUBLIC 
 	$<BUILD_INTERFACE:${ABSL_PATH}>
-	${PROJECT_SOURCE_DIR}/include
+	${CMAKE_CURRENT_SOURCE_DIR}/include
 	)
 
 target_sources(json_parser PRIVATE
