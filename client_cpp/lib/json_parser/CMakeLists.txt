@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.7)
 
+set(LIBWEBRTC_INCLUDE_PATH "D:/webrtcBuild/Sept/webrtc_checkout/src")
+set(ABSL_PATH "${LIBWEBRTC_INCLUDE_PATH}/third_party/abseil-cpp")
 
 add_library(json_parser
 	json_parser.h
@@ -7,11 +9,8 @@ add_library(json_parser
 	)
 
 target_include_directories(json_parser PUBLIC 
-	$<BUILD_INTERFACE:${BOOST_LIB}>
 	$<BUILD_INTERFACE:${ABSL_PATH}>
-	$<BUILD_INTERFACE:${CMAKE_HOME_DIRECTORY}/lib/>
 	${PROJECT_SOURCE_DIR}/include
-	"${PROJECT_SOURCE_DIR}/deps/libsdptransform/include"
 	)
 
 target_sources(json_parser PRIVATE
