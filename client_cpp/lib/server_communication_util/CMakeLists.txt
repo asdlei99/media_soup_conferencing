@@ -4,8 +4,6 @@ cmake_minimum_required(VERSION 3.7)
 add_library(server_communication_util
 	util.h
 	util.cpp
-	rendering_server_client.h
-	rendering_server_client.cpp
 	)
 
 	# Add some compile flags to our source files.
