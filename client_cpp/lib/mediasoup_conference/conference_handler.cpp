@@ -2,9 +2,7 @@
 #include "websocket_signaller.h"
 #include <iostream>
 #include "peer_connection/peerConnectionUtils.hpp"
-#include "media_render_util/video_render_util.h"
-#include "media_receiver/video_receiver/video_track_receiver_impl.h"
-
+#include "video_receiver_helper/video_receiver_helper.h"
 
 namespace grt {
 	
@@ -216,14 +214,13 @@ namespace grt {
 			videoConsumer_.reset(consumer);
 			auto* video_track = videoConsumer_->GetTrack();
 			assert(video_receiver_.get() == nullptr);
-			video_receiver_ = get_receiver(video_track);
 
 			assert(video_track);//todo: handle this to render 
 			//const auto r = util::set_video_renderer(video_receiver_.get());
 			//assert(r);
 			auto const id = consumer->GetId();
 			std::cout << "video renderer id " << id << '\n';
-			util::async_set_video_renderer(video_receiver_.get(), sender_, id);
+			video_receiver_ = set_video_renderer(video_track, sender_, id);
 		}
 		else
 			assert(false);

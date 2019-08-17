@@ -3,8 +3,8 @@
 #include <mediasoup/include/Device.hpp>
 #include <mediasoup/include/mediasoupclient.hpp>
 #include "json_parser.h"
-#include "media_receiver/video_receiver/video_track_receiver.h"
-#include "server_communication_util/rendering_server_client.h"
+#include "video_receiver_helper/video_receiver/video_track_receiver.h"
+#include "video_receiver_helper/rendering_server_client/rendering_server_client.h"
 
 namespace grt {
 	class signaller;

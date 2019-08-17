@@ -57,7 +57,9 @@ target_link_libraries(${EXE_NAME} PUBLIC
 	func_thread_handler
 	websocket_server
 	video_receiver
+	video_receiver_helper
 	video_render
+	rendering_server_client
 	d3d9
 	media_render_util
 	server_communication_util

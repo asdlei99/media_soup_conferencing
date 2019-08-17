@@ -18,3 +18,7 @@
 	path = client_cpp/lib/video_render
 	url = https://github.com/anil235476/video_renderer
 	branch = master
+[submodule "client_cpp/lib/video_receiver_helper"]
+	path = client_cpp/lib/video_receiver_helper
+	url = https://github.com/anil235476/video_receiver_helper
+	branch = master
