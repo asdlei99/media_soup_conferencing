@@ -51,13 +51,33 @@ namespace grt {
 			assert(room);
 
 			room->enter();
+			assert(room_.get() == nullptr);
+			assert(room.use_count() == 1);
 			room_ = room;
+			assert(room.use_count() == 2);
 #endif//UNIT_TEST
 			const auto res = make_room_join_req_res(true);
 			auto *func_thread = get_func_thread();
 			func_thread->dispatch(UI_SERVER_ID, res);
 
 		}
+			break;
+		case message_type::room_leave_req:
+#ifdef _DEBUG
+			std::cout << "room leave req " << "\n";
+			std::cout << "count room ref " << room_.use_count() << '\n';
+
+
+#endif//_DEBUG
+			assert(room_);
+			room_->leave();
+			assert(room_.unique());
+			assert(room_.use_count() == 1);
+		
+			room_.reset();
+			assert(room_.get() == nullptr);
+			assert(room_.use_count() == 0);
+			
 			break;
 		case message_type::room_open_req:
 		{

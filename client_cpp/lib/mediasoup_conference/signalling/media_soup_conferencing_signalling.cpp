@@ -4,6 +4,14 @@
 
 namespace grt {
 
+
+		media_soup_signalling_cbk::~media_soup_signalling_cbk() {
+#ifdef _DEBUG
+			//assert(false);
+			std::cout << "mediasoup signalling cbk called\n";
+#endif//_DEBUG
+		}
+
 		media_soup_signalling_cbk::media_soup_signalling_cbk(
 			std::shared_ptr<grt::parser_callback> parser)
 			: parser_{ parser } {}

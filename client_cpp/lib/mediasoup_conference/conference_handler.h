@@ -14,10 +14,10 @@ namespace grt {
 		std::unique_ptr<mediasoupclient::Consumer> audioConsumer_;
 		std::unique_ptr<mediasoupclient::Consumer> videoConsumer_;
 		std::unique_ptr< video_track_receiver> video_receiver_;
-		grt::sender* sender_{ nullptr };
+		std::shared_ptr<sender> sender_;
 	
 	public:
-		consumer_handler(grt::sender*);
+		consumer_handler(std::shared_ptr<sender>);
 		~consumer_handler();
 
 		void consumer(mediasoupclient::Consumer* consumer, std::string const& kind);
@@ -44,10 +44,11 @@ namespace grt {
 			std::unique_ptr<consumer_handler> > consumers_;
 		std::unique_ptr<mediasoupclient::RecvTransport> consumer_transport_;
 		std::promise<void> consumer_transport_connect_response_;
-		sender sender_;
+		std::shared_ptr<sender> sender_ = std::make_shared<sender>();
 
 	public:
 		media_soup_conference_handler(grt::signaller* signaller);
+		~media_soup_conference_handler() override;
 
 		void on_message(grt::message_type type, absl::any msg) override;
 

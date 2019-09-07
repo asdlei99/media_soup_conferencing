@@ -65,7 +65,7 @@ namespace grt {
 
 		std::packaged_task<
 			std::shared_ptr<room>(std::shared_ptr<signaller>)
-		> task{ [](std::shared_ptr<signaller> signaller_)-> std::shared_ptr<room> {
+		> task{ [room_id](std::shared_ptr<signaller> signaller_)-> std::shared_ptr<room> {
 				if (signaller_.get() == nullptr) return nullptr;
 #ifdef _DEBUG
 				std::cout << "got server handle to server room" << '\n';
@@ -75,7 +75,7 @@ namespace grt {
 				auto signaller_callback_ = get_signaller_clb(
 					 std::move(media_soup_confernce));
 
-				auto room = get_room_handle_impl(signaller_);
+				auto room = get_room_handle_impl(signaller_, room_id);
 
 				signaller_->set_callback(std::move(signaller_callback_));
 
