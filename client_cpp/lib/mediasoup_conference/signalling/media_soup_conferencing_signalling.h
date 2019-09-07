@@ -17,7 +17,7 @@ namespace grt {
 	private:
 		std::shared_ptr<grt::parser_callback> parser_;
 	public:
-
+		~media_soup_signalling_cbk() override;
 		media_soup_signalling_cbk( std::shared_ptr<grt::parser_callback> parser);
 
 		void on_message(std::string msg) override;

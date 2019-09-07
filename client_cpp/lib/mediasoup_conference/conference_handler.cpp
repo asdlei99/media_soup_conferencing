@@ -2,16 +2,14 @@
 #include "websocket_signaller.h"
 #include <iostream>
 #include "peer_connection/peerConnectionUtils.hpp"
-#include "media_render_util/video_render_util.h"
-#include "media_receiver/video_receiver/video_track_receiver_impl.h"
-
+#include "video_receiver_helper/video_receiver_helper.h"
 
 namespace grt {
 	
 	media_soup_conference_handler::media_soup_conference_handler(grt::signaller* signaller)
 		:signaller_{ signaller } {
 		assert(signaller_);
-		auto future_ = sender_.sync_connect(RENDERING_SERVER_IP, RENDERING_SERVER_PORT);
+		auto future_ = sender_->sync_connect(RENDERING_SERVER_IP, RENDERING_SERVER_PORT);
 
 		std::thread{ [future = std::move(future_)]()mutable{
 			//todo: FIXMe this has to be fixed. and it is run time check as well for error case
@@ -20,6 +18,20 @@ namespace grt {
 			const auto connection_status = future.get();
 			assert(connection_status);
 		} }.detach();
+	}
+
+
+
+	media_soup_conference_handler::~media_soup_conference_handler() {
+#ifdef _DEBUG
+		//assert(false);
+		std::cout << "media soup destruction called\n";
+
+#endif//_DEBUG
+		if (consumer_transport_) consumer_transport_->Close();
+		if (videoProducer_) videoProducer_->Close();
+		if (send_transport_) send_transport_->Close();
+		//assert(false);
 	}
 
 	void media_soup_conference_handler::on_message(grt::message_type type, absl::any msg){
@@ -122,7 +134,7 @@ namespace grt {
 			const std::string kind = m["kind"];
 			assert(consumer_transport_);
 
-			const auto r = consumers_.emplace(peerId, std::make_unique< consumer_handler>(&sender_));
+			const auto r = consumers_.emplace(peerId, std::make_unique< consumer_handler>(sender_));
 			assert(r.second);//insertion should have hapened
 
 			auto* consumer = consumer_transport_->Consume(r.first->second.get(), m["id"], m["producerId"], kind,
@@ -192,7 +204,7 @@ namespace grt {
 
 	}
 
-	consumer_handler::consumer_handler(grt::sender* sender)
+	consumer_handler::consumer_handler(std::shared_ptr<sender> sender)
 		:sender_{ sender }{ assert(sender_); }
 
 	consumer_handler::~consumer_handler() {
@@ -216,14 +228,13 @@ namespace grt {
 			videoConsumer_.reset(consumer);
 			auto* video_track = videoConsumer_->GetTrack();
 			assert(video_receiver_.get() == nullptr);
-			video_receiver_ = get_receiver(video_track);
 
 			assert(video_track);//todo: handle this to render 
 			//const auto r = util::set_video_renderer(video_receiver_.get());
 			//assert(r);
 			auto const id = consumer->GetId();
 			std::cout << "video renderer id " << id << '\n';
-			util::async_set_video_renderer(video_receiver_.get(), sender_, id);
+			video_receiver_ = set_video_renderer(video_track, sender_, id);
 		}
 		else
 			assert(false);
