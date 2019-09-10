@@ -105,3 +105,10 @@ rtc::scoped_refptr<webrtc::VideoTrackInterface> createVideoTrack(const std::stri
 		createPeerConnectionFactory();
 	return peerConnectionFactory->CreateVideoTrack(label, videoDevice);
 }
+
+
+void destroy_video_source() {
+	if (videoDevice == nullptr) return;
+	videoDevice = rtc::scoped_refptr<CapturerTrackSource>{};//reset device;
+
+}

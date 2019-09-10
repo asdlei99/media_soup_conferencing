@@ -28,9 +28,12 @@ namespace grt {
 		std::cout << "media soup destruction called\n";
 
 #endif//_DEBUG
-		if (consumer_transport_) consumer_transport_->Close();
+		//if (consumer_transport_) consumer_transport_->Close();
 		if (videoProducer_) videoProducer_->Close();
 		if (send_transport_) send_transport_->Close();
+		destroy_video_source();
+
+		consumers_.clear();
 		//assert(false);
 	}
 
