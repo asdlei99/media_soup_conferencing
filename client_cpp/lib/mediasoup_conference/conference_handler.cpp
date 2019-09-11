@@ -114,9 +114,15 @@ namespace grt {
 
 			consumer_transport_.reset(transport);
 
+			const auto m = make_participant_info_req();
+			signaller_->send(m);
+
 		}
 		else if (grt::message_type::peer_add == type) {
 			const auto peer_id = absl::any_cast<std::string>(msg);
+			if (consumer_transport_.get() == nullptr || consumers_.find(peer_id) != consumers_.end())
+				return;//ignore this.
+			
 			assert(consumers_.find(peer_id) == consumers_.end());
 
 			//todo: check if consumer is already created for this peer id.
