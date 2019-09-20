@@ -3,6 +3,7 @@
 #include <iostream>
 #include "peer_connection/peerConnectionUtils.hpp"
 #include "video_receiver_helper/video_receiver_helper.h"
+#include "video_receiver_helper/media_render_util/video_render_util.h"
 
 namespace grt {
 	
@@ -11,13 +12,19 @@ namespace grt {
 		assert(signaller_);
 		auto future_ = sender_->sync_connect(RENDERING_SERVER_IP, RENDERING_SERVER_PORT);
 
-		std::thread{ [future = std::move(future_)]()mutable{
-			//todo: FIXMe this has to be fixed. and it is run time check as well for error case
-			auto status = future.wait_for(std::chrono::seconds(5));
-			assert(status != std::future_status::timeout); //if it crashes here, it means renderer is not running
-			const auto connection_status = future.get();
-			assert(connection_status);
-		} }.detach();
+		auto status = future_.wait_for(std::chrono::seconds(5));
+		assert(status != std::future_status::timeout); //if it crashes here, it means renderer is not running
+		const auto connection_status = future_.get();
+		assert(connection_status);
+		util::show_rendering_window(sender_);
+		//std::thread{ [future = std::move(future_)]()mutable{
+		//	//todo: FIXMe this has to be fixed. and it is run time check as well for error case
+		//	auto status = future.wait_for(std::chrono::seconds(5));
+		//	assert(status != std::future_status::timeout); //if it crashes here, it means renderer is not running
+		//	const auto connection_status = future.get();
+		//	assert(connection_status);
+		//	
+		//} }.detach();
 	}
 
 
@@ -34,6 +41,7 @@ namespace grt {
 		destroy_video_source();
 
 		consumers_.clear();
+		util::hide_rendering_window(sender_);
 		//assert(false);
 	}
 
