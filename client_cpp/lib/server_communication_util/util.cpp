@@ -5,6 +5,7 @@
 #include <memory>
 #include "json_parser.h"
 #include <iostream>
+#include  "../function_thread_handler/func_thread_handler.h"
 
 
 namespace util {
@@ -233,6 +234,11 @@ namespace util {
 		async_task_executor<
 			decltype(internal::join_room_req)
 		>(status, internal::join_room_req, room_id, user_name, server, port);
+	}
+
+	func_thread_handler* get_func_thread() {
+		static util::func_thread_handler func_object;
+		return &func_object;
 	}
 
 }//namespace util

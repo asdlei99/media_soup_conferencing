@@ -32,7 +32,8 @@ namespace util {
 	void async_join_room(std::string const room_id, std::string const user_name, std::string const server,
 		std::string const port, status_type status);
 
-
+	class func_thread_handler;//forward declaration.
+	func_thread_handler* get_func_thread();
 }//namespace util
 
 #endif

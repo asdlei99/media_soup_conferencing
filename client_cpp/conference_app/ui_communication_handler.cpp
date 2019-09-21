@@ -3,30 +3,26 @@
 #include "websocket_server/websocket_server.h"
 #include "mediasoup_conference/mediasoup_conference.h"
 #include <iostream>
+#include "server_communication_util/util.h"
 
 //#define UNIT_TEST //todo undef this when real media soup server running and actual connection is inteneded
 
 namespace grt {
 
 
-	static util::func_thread_handler func_object;
-	util::func_thread_handler* get_func_thread() {
-		return &func_object;
-	}
-
 	ui_communication_handler::~ui_communication_handler() = default;
 
 	void ui_communication_handler::start(unsigned short port, int threads) {
-		auto *func_thread = get_func_thread();
+		auto *func_thread = util::get_func_thread();
 		func_thread->register_id(
 			REC_ID,
 			std::bind(&ui_communication_handler::on_ui_message, this, std::placeholders::_1)
 		);
-		grt::start_server_block(port, 1, get_func_thread(), REC_ID);
+		grt::start_server_block(port, 1, util::get_func_thread(), REC_ID);
 	}
 
 	void ui_communication_handler::message_for_ui(std::string m) {
-		auto *func_thread = get_func_thread();
+		auto *func_thread = util::get_func_thread();
 		func_thread->dispatch(UI_SERVER_ID, m);
 	}
 
@@ -57,7 +53,7 @@ namespace grt {
 			assert(room.use_count() == 2);
 #endif//UNIT_TEST
 			const auto res = make_room_join_req_res(true);
-			auto *func_thread = get_func_thread();
+			auto *func_thread = util::get_func_thread();
 			func_thread->dispatch(UI_SERVER_ID, res);
 
 		}
@@ -95,7 +91,7 @@ namespace grt {
 			const std::string id = "test";//result.get();
 #endif//
 			const auto res = make_room_create_req_res(true, id);
-			auto *func_thread = get_func_thread();
+			auto *func_thread = util::get_func_thread();
 			func_thread->dispatch(UI_SERVER_ID, res);
 			
 		}
@@ -117,7 +113,7 @@ namespace grt {
 			
 #endif//
 			const auto ui_msg = convert_to_json(rooms_info);
-			auto *func_thread = get_func_thread();
+			auto *func_thread = util::get_func_thread();
 			func_thread->dispatch(UI_SERVER_ID, ui_msg);
 			break;
 		}

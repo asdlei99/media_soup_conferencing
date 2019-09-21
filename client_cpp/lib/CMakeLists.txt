@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 
+set(SIGNALLER_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+set(JSON_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/json_parser/include)
+set(JSON_LIB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/json_parser/)
+
+
 add_subdirectory(signaller)
 add_subdirectory(json_parser)
 add_subdirectory(mediasoup_conference)

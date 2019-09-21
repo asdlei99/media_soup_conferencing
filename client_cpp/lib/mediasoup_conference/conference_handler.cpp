@@ -4,6 +4,15 @@
 #include "peer_connection/peerConnectionUtils.hpp"
 #include "video_receiver_helper/video_receiver_helper.h"
 #include "video_receiver_helper/media_render_util/video_render_util.h"
+#include "server_communication_util/util.h"
+
+namespace util {
+	void send_event(std::string const& m) {
+		auto* function_thread = get_func_thread();
+		assert(function_thread);
+		function_thread->dispatch(REC_ID, m);
+	}
+}
 
 namespace grt {
 	
@@ -17,14 +26,13 @@ namespace grt {
 		const auto connection_status = future_.get();
 		assert(connection_status);
 		util::show_rendering_window(sender_);
-		//std::thread{ [future = std::move(future_)]()mutable{
-		//	//todo: FIXMe this has to be fixed. and it is run time check as well for error case
-		//	auto status = future.wait_for(std::chrono::seconds(5));
-		//	assert(status != std::future_status::timeout); //if it crashes here, it means renderer is not running
-		//	const auto connection_status = future.get();
-		//	assert(connection_status);
-		//	
-		//} }.detach();
+		
+		sender_->register_for_session_leave_msg([](auto type, auto msg) {
+			assert(message_type::session_leave_req == type);
+			const auto m = make_room_leave_req("unknown");
+			util::send_event(m);
+
+		});
 	}
 
 
