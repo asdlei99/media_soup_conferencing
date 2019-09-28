@@ -59,6 +59,7 @@ namespace grt {
 		}
 			break;
 		case message_type::room_leave_req:
+		{
 #ifdef _DEBUG
 			std::cout << "room leave req " << "\n";
 			std::cout << "count room ref " << room_.use_count() << '\n';
@@ -69,11 +70,14 @@ namespace grt {
 			room_->leave();
 			assert(room_.unique());
 			assert(room_.use_count() == 1);
-		
+
 			room_.reset();
 			assert(room_.get() == nullptr);
 			assert(room_.use_count() == 0);
-			
+
+			const auto m = make_session_leave_notification();
+			message_for_ui(m);
+		}
 			break;
 		case message_type::room_open_req:
 		{
