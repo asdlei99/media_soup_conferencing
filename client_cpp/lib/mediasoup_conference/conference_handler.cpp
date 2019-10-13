@@ -152,7 +152,17 @@ namespace grt {
 		else if (grt::message_type::consumer_res == type) {
 			const auto m = absl::any_cast<json>(msg);
 			//const std::string id = m["id"];
+			const std::string status = m["status"];
+			if (status == "error") {
+				//todo log it
+				return;
+			}
 			const std::string peerId = m["peerId"];
+
+			if (consumers_.find(peerId) != consumers_.end()) {
+				//todo Log it
+				return;
+			}
 			
 			assert(consumers_.find(peerId) == consumers_.end());
 
@@ -161,16 +171,24 @@ namespace grt {
 
 			const auto r = consumers_.emplace(peerId, std::make_unique< consumer_handler>(sender_));
 			assert(r.second);//insertion should have hapened
+			try {
+				auto* consumer = consumer_transport_->Consume(r.first->second.get(), m["id"], m["producerId"], kind,
+					&m["rtpParameters"]);
 
-			auto* consumer = consumer_transport_->Consume(r.first->second.get(), m["id"], m["producerId"], kind,
-				&m["rtpParameters"]);
-			r.first->second->consumer(consumer, kind);
 
-			{
-				//now ask to server to resume track
-				const auto id = consumer->GetId();
-				const auto m = grt::make_consumer_resume_req(id);
-				this->signaller_->send(m);
+				r.first->second->consumer(consumer, kind);
+
+				{
+					//now ask to server to resume track
+					const auto id = consumer->GetId();
+					const auto m = grt::make_consumer_resume_req(id);
+					this->signaller_->send(m);
+				}
+			}
+			catch (...) {
+				//todo design this properly
+				std::cout << "\n handle this soon\n";
+				assert(false);
 			}
 
 		}
