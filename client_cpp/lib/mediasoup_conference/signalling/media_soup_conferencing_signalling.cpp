@@ -23,7 +23,7 @@ namespace grt {
 
 		void media_soup_signalling_cbk::on_error(std::string error){
 			std::cout << "error occur = " << error << '\n';
-			assert(false);
+			//assert(false);//todo: handle this
 		}
 
 		void media_soup_signalling_cbk::on_close(){

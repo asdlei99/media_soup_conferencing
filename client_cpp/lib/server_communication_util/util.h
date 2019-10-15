@@ -4,6 +4,7 @@
 #include <string>
 #include <future>
 #include "common/common_def.h"
+#include "absl/types//optional.h"
 
 namespace grt {
 	class signaller;
@@ -12,7 +13,7 @@ namespace grt {
 
 namespace util {
 
-	using id_response = std::packaged_task<std::string (std::string)>;
+	using id_response = std::packaged_task<absl::optional<std::string> (absl::optional<std::string>)>;
 
 	void async_get_room_id(std::string const room_name, std::string const server,
 		std::string const port, id_response&& res);

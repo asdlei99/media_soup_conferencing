@@ -44,15 +44,16 @@ namespace grt {
 				room_info.room_id_, room_info.ip_, room_info.port_);
 			auto room = room_fut.get();
 
-			assert(room);
+			if (room) {
+				room->enter();
+				assert(room_.get() == nullptr);
+				assert(room.use_count() == 1);
+				room_ = room;
+				assert(room.use_count() == 2);
+			}
 
-			room->enter();
-			assert(room_.get() == nullptr);
-			assert(room.use_count() == 1);
-			room_ = room;
-			assert(room.use_count() == 2);
 #endif//UNIT_TEST
-			const auto res = make_room_join_req_res(true);
+			const auto res = make_room_join_req_res(room.get() != nullptr);
 			auto *func_thread = util::get_func_thread();
 			func_thread->dispatch(UI_SERVER_ID, res);
 
@@ -90,11 +91,11 @@ namespace grt {
 			const std::string port = m["port"];
 #ifndef UNIT_TEST
 		    auto result =	grt::async_create_room(room_name, ip, port);
-			const auto id = result.get();
+			absl::optional<std::string> id = result.get();
 #else
 			const std::string id = "test";//result.get();
 #endif//
-			const auto res = make_room_create_req_res(true, id);
+			const auto res = make_room_create_req_res(id.has_value(), id.value_or(""));
 			auto *func_thread = util::get_func_thread();
 			func_thread->dispatch(UI_SERVER_ID, res);
 			

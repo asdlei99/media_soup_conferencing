@@ -7,14 +7,14 @@
 #include "room_impl.h"
 
 namespace grt {
-	std::future<std::string>
+	std::future<absl::optional<std::string>>
 		async_create_room(std::string const room_name, std::string const server,
 			std::string port) {
 
-		std::packaged_task<std::string (std::string const id)> task(
-			[](const std::string id){
+		std::packaged_task<absl::optional<std::string>(absl::optional<std::string> const id)> task(
+			[](absl::optional<std::string> id){
 #ifdef _DEBUG
-			std::cout << "id received " << id << '\n';
+			std::cout << "id received " << id.has_value() << '\n';
 #endif
 			return id;
 		});

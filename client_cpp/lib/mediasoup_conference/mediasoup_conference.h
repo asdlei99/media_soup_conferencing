@@ -4,13 +4,14 @@
 #include <string>
 #include "room.h"
 #include "common/common_def.h"
+#include "absl/types/optional.h"
 
 namespace grt{
 
 
 	///////  Room Management API /////////////////////////
 	//returns room if on success, or throws exception if error
-	std::future<std::string>
+	std::future<absl::optional<std::string>>
 		async_create_room(std::string const room_name, std::string const server, 
 			std::string port);
 

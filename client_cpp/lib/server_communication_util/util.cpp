@@ -40,7 +40,8 @@ namespace util {
 
 			void on_error(std::string error) override {
 				std::cout << "error occur = " << error << '\n';
-				assert(false);
+				handler(grt::message_type::invalid, error, this);
+				//assert(false);
 			}
 
 			void on_close() override {
@@ -68,10 +69,10 @@ namespace util {
 			return std::make_unique< signalling_callback< Command, Handler>>(p, cmd, handler);
 		}
 
-		std::string
+		absl::optional<std::string>
 			room_id_geter(std::string const room_name, std::string const server,
 				std::string const port) {
-			std::promise<std::string> promise;
+			std::promise<absl::optional<std::string>> promise;
 			auto future = promise.get_future();
 
 			grt::websocket_signaller signaller;
@@ -79,20 +80,29 @@ namespace util {
 				const auto m = grt::create_room_create_req(room_name);
 				signaller.send(m);
 			}, [&promise](grt::message_type type, absl::any msg, auto ptr) {
+				static bool is_done = false; //todo: need to remove this.
 				if (grt::message_type::create_room_res == type) {
 
 					std::string id = absl::any_cast<std::string>(msg);
 					std::cout << "received create room id " << id << '\n';
-					//delete ptr;//improve this design
 					promise.set_value(id);
 					std::cout << "after promise set\n";
 				}
+				else if (grt::message_type::invalid == type) {
+					if(is_done == false)
+					promise.set_value(absl::optional<std::string>{});
+				}
+				else {
+					if (is_done == false)
+					promise.set_value(absl::optional<std::string>{});
+				}
+				is_done = true;
 			});
 
 			signaller.connect(server, port, std::move(signalling_callback));
 
 			const auto r = future.get();
-			std::cout << "in future " << r << '\n';
+			std::cout << "in future " << r.has_value() << '\n';
 			signaller.disconnect();
 			std::cout << "returning value\n";
 			return r;
@@ -161,7 +171,7 @@ namespace util {
 		std::shared_ptr<grt::signaller> 
 			join_room_req(std::string const room_id, std::string user_name, std::string const server,
 			std::string port) {
-			std::promise<std::string> promise;
+			std::promise<bool> promise;
 			auto future = promise.get_future();
 
 			auto signaller = std::make_unique< grt::websocket_signaller>();
@@ -172,18 +182,27 @@ namespace util {
 			}, [&promise](grt::message_type type, absl::any msg, auto ptr) {
 				if (grt::message_type::room_join_res == type) {
 
-					std::string const result = absl::any_cast<std::string>(msg);
+					auto const result = absl::any_cast<bool>(msg);
 					std::cout << "room join response" << result << '\n';
 					//delete ptr;//improve this design
 					promise.set_value(result);
 					std::cout << "after promise set\n";
+				}
+				else if (grt::message_type::invalid == type) {
+					std::cout << "room join failed";
+					promise.set_value(false);
+				}
+				else {
+					
+					assert(false);
+					promise.set_value(false);
 				}
 			});
 			const std::string text = std::string{ "/?roomId=" } +room_id + "&peerName=" + user_name;
 			signaller->connect(server, port, text, std::move(signalling_callback));
 
 			const auto r = future.get();
-			if (r == "okay") {
+			if (r) {
 				return signaller;
 			}
 			std::cout << "in future " << r << '\n';
