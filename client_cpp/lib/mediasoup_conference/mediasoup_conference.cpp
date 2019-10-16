@@ -40,15 +40,16 @@ namespace grt {
 
 		return result;
 	}
-	std::future< std::vector<room_info>>
+	std::future< absl::optional<util::room_list>>
 		async_get_room_infos(std::string const server, std::string const port) {
-		std::packaged_task<util::room_list(util::room_list)> task{
-			[](util::room_list list) {
+		std::packaged_task< absl::optional<util::room_list>(absl::optional<util::room_list>)> task{
+			[](absl::optional<util::room_list> list) {
 #ifdef _DEBUG
 			auto printer = [](const room_info info) {
 					std::cout << info.id_ << " name = " << info.name_ << '\n';
 			};
-			std::for_each(list.begin(), list.end(), printer);
+			if(list.has_value())
+				std::for_each(list->begin(), list->end(), printer);
 #endif//_DEBUG
 
 			return list;

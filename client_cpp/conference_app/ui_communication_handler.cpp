@@ -117,7 +117,7 @@ namespace grt {
 			std::vector<room_info> const rooms_info{ {"test", "test"}, {"test1", "test1"} };
 			
 #endif//
-			const auto ui_msg = convert_to_json(rooms_info);
+			const auto ui_msg = convert_to_json(rooms_info.has_value(), *rooms_info);
 			auto *func_thread = util::get_func_thread();
 			func_thread->dispatch(UI_SERVER_ID, ui_msg);
 			break;

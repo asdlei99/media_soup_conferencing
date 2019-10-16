@@ -20,6 +20,7 @@ namespace util {
 			grt::signaller* sender_{ nullptr };
 			Command cmd;
 			Handler handler;
+			bool done_{ false };
 
 		public:
 
@@ -40,7 +41,8 @@ namespace util {
 
 			void on_error(std::string error) override {
 				std::cout << "error occur = " << error << '\n';
-				handler(grt::message_type::invalid, error, this);
+				if(done_ == false)
+					handler(grt::message_type::invalid, error, this);
 				//assert(false);
 			}
 
@@ -59,7 +61,12 @@ namespace util {
 			}
 
 			void on_message(grt::message_type type, absl::any msg) override {
-				handler(type, msg, this);
+				if (done_ == false)
+					handler(type, msg, this);
+			}
+
+			void set_done(bool done) {
+				done_ = done;
 			}
 		};
 
@@ -80,7 +87,6 @@ namespace util {
 				const auto m = grt::create_room_create_req(room_name);
 				signaller.send(m);
 			}, [&promise](grt::message_type type, absl::any msg, auto ptr) {
-				static bool is_done = false; //todo: need to remove this.
 				if (grt::message_type::create_room_res == type) {
 
 					std::string id = absl::any_cast<std::string>(msg);
@@ -89,14 +95,12 @@ namespace util {
 					std::cout << "after promise set\n";
 				}
 				else if (grt::message_type::invalid == type) {
-					if(is_done == false)
 					promise.set_value(absl::optional<std::string>{});
 				}
 				else {
-					if (is_done == false)
 					promise.set_value(absl::optional<std::string>{});
 				}
-				is_done = true;
+				ptr->set_done(true);
 			});
 
 			signaller.connect(server, port, std::move(signalling_callback));
@@ -138,10 +142,10 @@ namespace util {
 			return r;
 		}
 
-		std::vector<grt::room_info>
+		absl::optional<room_list>
 			get_room_infos_req(std::string const server,
 				std::string const port) {
-			std::promise<std::vector<grt::room_info>> promise;
+			std::promise<absl::optional<room_list>> promise;
 			auto future = promise.get_future();
 			grt::websocket_signaller signaller;
 
@@ -153,11 +157,18 @@ namespace util {
 				if (grt::message_type::res_rooms_info == type) {
 
 					auto const result = absl::any_cast<std::vector<grt::room_info>>(msg);
-					//std::cout << "close room res" << result << '\n';
-					//delete ptr;//improve this design
-					promise.set_value(result);
+						promise.set_value(result);
 					//std::cout << "after promise set\n";
 				}
+				else if (grt::message_type::invalid == type) {
+					std::cout << "\n error in connection\n";
+						promise.set_value(absl::optional<room_list>{});
+				}
+				else {
+					std::cout << "\n unknown error\n";
+						promise.set_value(absl::optional<room_list>{});
+				}
+				ptr->set_done(true);
 			});
 
 			signaller.connect(server, port, std::move(signalling_callback));

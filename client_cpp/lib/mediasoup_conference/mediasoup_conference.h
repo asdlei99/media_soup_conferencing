@@ -5,6 +5,7 @@
 #include "room.h"
 #include "common/common_def.h"
 #include "absl/types/optional.h"
+#include "server_communication_util/util.h"
 
 namespace grt{
 
@@ -20,7 +21,7 @@ namespace grt{
 		async_close_room(std::string const room_id, std::string const server,
 			std::string port);
 
-	std::future< std::vector<room_info>>
+	std::future< absl::optional<util::room_list>>
 		async_get_room_infos(std::string const server, std::string const port);
 	///////  Room Management API /////////////////////////
 

@@ -23,7 +23,7 @@ namespace util {
 		std::string const server, std::string const port, response res);
 
 	using room_list = std::vector<grt::room_info>;
-	using room_info_res = std::packaged_task<room_list(room_list) >;
+	using room_info_res = std::packaged_task<absl::optional<room_list>(absl::optional<room_list>) >;
 	void async_get_rooms_info(std::string const server, 
 		std::string const port, room_info_res res);
 
