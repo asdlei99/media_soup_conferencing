@@ -2,7 +2,7 @@
 #include <cassert>
 #include "websocket_server/websocket_server.h"
 #include "mediasoup_conference/mediasoup_conference.h"
-#include <iostream>
+#include "spdlog/spdlog.h"
 #include "server_communication_util/util.h"
 
 //#define UNIT_TEST //todo undef this when real media soup server running and actual connection is inteneded
@@ -27,6 +27,7 @@ namespace grt {
 	}
 
 	void ui_communication_handler::on_ui_message(std::string m) {
+		spdlog::info("on_ui_msg = {}", m);
 		async_parse_message(m, this);
 	}
 
@@ -34,9 +35,8 @@ namespace grt {
 		switch (type) {
 		case message_type::room_join_req:
 		{
-#ifdef _DEBUG
-			std::cout << "room_join_req " << '\n';
-#endif//_DEBUG
+			spdlog::info("room_join_req from ui");
+
 #ifndef UNIT_TEST
 			assert(room_.get() == nullptr);
 			const auto room_info = absl::any_cast<room_connection_credential>(msg);
@@ -61,12 +61,7 @@ namespace grt {
 			break;
 		case message_type::room_leave_req:
 		{
-#ifdef _DEBUG
-			std::cout << "room leave req " << "\n";
-			std::cout << "count room ref " << room_.use_count() << '\n';
-
-
-#endif//_DEBUG
+			spdlog::info("room leave req, room object count {} ", room_.use_count());
 			assert(room_);
 			room_->leave();
 			assert(room_.unique());
@@ -83,9 +78,8 @@ namespace grt {
 		case message_type::room_open_req:
 		{
 			const json m = absl::any_cast<json>(msg);
-#ifdef _DEBUG
-			std::cout << " room open req from ui " << m << '\n';
-#endif//_DEBUG
+			spdlog::info("room open req from ui {}", m.dump());
+
 			const std::string room_name = m["name"];
 			const std::string ip = m["ip"];
 			const std::string port = m["port"];
@@ -106,10 +100,7 @@ namespace grt {
 			const json m = absl::any_cast<json>(msg);
 			const std::string ip = m["ip"];
 			const std::string port = m["port"];
-#ifdef _DEBUG
-			std::cout << "req_room_info "<<ip<<"port ="<<port<<"\n";
-
-#endif//_DEBUG
+			spdlog::info("req_room_info, msg ip = {}, port = {}", ip, port);
 #ifndef UNIT_TEST
 			auto result = grt::async_get_room_infos(ip, port);
 			const auto rooms_info = result.get();

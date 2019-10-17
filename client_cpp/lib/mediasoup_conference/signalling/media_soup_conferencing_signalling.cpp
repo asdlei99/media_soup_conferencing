@@ -1,6 +1,7 @@
 #include "media_soup_conferencing_signalling.h"
 #include <iostream>
 #include "json_parser.h"
+#include "spdlog/spdlog.h"
 
 namespace grt {
 
@@ -17,17 +18,20 @@ namespace grt {
 			: parser_{ parser } {}
 
 		void media_soup_signalling_cbk::on_message(std::string msg) {
-			std::cout << "on message = " << msg << '\n';
+			//std::cout << "on message = " << msg << '\n';
+			spdlog::info("media_soup_siganlling_cbk message received = {}", msg);
 			grt::async_parse_message(msg, parser_.get());
 		}
 
 		void media_soup_signalling_cbk::on_error(std::string error){
-			std::cout << "error occur = " << error << '\n';
+			//std::cout << "error occur = " << error << '\n';
+			spdlog::error("media_soup_siganlling_cbk on_error = {}", error);
 			//assert(false);//todo: handle this
 		}
 
 		void media_soup_signalling_cbk::on_close(){
 			std::cout << "close sigannling connection\n";
+			spdlog::warn("media_soup_siganlling_cbk on_close()");
 		}
 
 		std::unique_ptr<signaller_callback>

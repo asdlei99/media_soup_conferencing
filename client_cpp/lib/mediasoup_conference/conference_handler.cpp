@@ -5,6 +5,7 @@
 #include "video_receiver_helper/video_receiver_helper.h"
 #include "video_receiver_helper/media_render_util/video_render_util.h"
 #include "server_communication_util/util.h"
+#include "spdlog/spdlog.h"
 
 namespace util {
 	void send_event(std::string const& m) {
@@ -21,8 +22,14 @@ namespace grt {
 		assert(signaller_);
 		auto future_ = sender_->sync_connect(RENDERING_SERVER_IP, RENDERING_SERVER_PORT);
 
-		auto status = future_.wait_for(std::chrono::seconds(5));
-		assert(status != std::future_status::timeout); //if it crashes here, it means renderer is not running
+		auto const status = future_.wait_for(std::chrono::seconds(5));
+		spdlog::info("rendering server connection pass = {}", status != std::future_status::timeout);
+		if (status == std::future_status::timeout) {
+			spdlog::error("redering server is not running ");
+			assert(false);//if it crashes here, it means renderer is not running
+			throw std::runtime_error{ "rendering server applciation not running " };
+			
+		}
 		const auto connection_status = future_.get();
 		assert(connection_status);
 		util::show_rendering_window(sender_);
@@ -57,7 +64,7 @@ namespace grt {
 
 		if (grt::message_type::router_capablity == type) {
 			const auto cap = absl::any_cast<json>(msg);
-			std::cout << "\n\nrouter capablity " << cap << '\n';
+			spdlog::info("router capablity = {}", cap.dump());
 			assert(!device_.IsLoaded());
 			device_.Load(cap);
 			assert(device_.IsLoaded());
@@ -81,45 +88,46 @@ namespace grt {
 
 		else if (grt::message_type::producer_transport_res == type) {
 			TransportRemoteParameters = absl::any_cast<json>(msg);
+			spdlog::info("producer_transport_res case {}", TransportRemoteParameters.dump());
 			const std::string id = TransportRemoteParameters["id"];
 			const auto iceParameters = TransportRemoteParameters["iceParameters"];
 			const auto iceCandidates = TransportRemoteParameters["iceCandidates"];
 			const auto dtlsParameters = TransportRemoteParameters["dtlsParameters"];
 
-			std::cout << "producer transport id " << id << '\n';
-			std::cout << "iceparameters " << iceParameters << '\n';
-			std::cout << "iceCandidates " << iceCandidates << '\n';
-			std::cout << "dtls parameters " << dtlsParameters << '\n';
 			assert(send_transport_.get() == nullptr);
+			spdlog::info("going to create send transport ");
 			send_transport_.reset(device_.CreateSendTransport(this, id, iceParameters,
 				iceCandidates, dtlsParameters));
 			assert(send_transport_.get());
 
 			assert(send_transport_->GetId() == id);
-			std::cout << "connection state in transport " << send_transport_->GetConnectionState() << '\n';
+			spdlog::info("send transport creation success, state = {}, id = {}", send_transport_->GetConnectionState(), send_transport_->GetId());
 			assert(send_transport_->IsClosed() == false);
 
 			assert(videoTrack_.get() == nullptr);
 			videoTrack_ = createVideoTrack("video-track-id");
 			assert(videoTrack_.get());
-
+			spdlog::info("video track creation result {} ", videoTrack_.get() != nullptr);
 
 			std::vector<webrtc::RtpEncodingParameters> encodings;
 			encodings.emplace_back(webrtc::RtpEncodingParameters());
-			encodings.emplace_back(webrtc::RtpEncodingParameters());
-			encodings.emplace_back(webrtc::RtpEncodingParameters());
+			//encodings.emplace_back(webrtc::RtpEncodingParameters());
+			//encodings.emplace_back(webrtc::RtpEncodingParameters());
 
 			assert(videoProducer_.get() == nullptr);
 			videoProducer_.reset(
 				send_transport_->Produce(this, videoTrack_, &encodings, nullptr));
+			spdlog::info("producer creation complete in   producer_transport_res ");
 
 		}
 		else if (grt::message_type::produce_res == type) {
 			const auto id_j = absl::any_cast<json>(msg);
+			spdlog::info("produce_res msg = ", id_j.dump());
 			producer_response_.set_value(id_j["id"]);
 		}
 		else if (grt::message_type::consumer_create_res == type) {
 			const auto param = absl::any_cast<json>(msg);
+			spdlog::info("consumer_create_res {}", param.dump());
 			const std::string id = param["id"];
 			const auto iceParameters = param["iceParameters"];
 			const auto iceCandidates = param["iceCandidates"];
@@ -136,8 +144,13 @@ namespace grt {
 		}
 		else if (grt::message_type::peer_add == type) {
 			const auto peer_id = absl::any_cast<std::string>(msg);
+			spdlog::info("peer_add ", peer_id);
 			if (consumer_transport_.get() == nullptr || consumers_.find(peer_id) != consumers_.end())
-				return;//ignore this.
+			{
+				spdlog::warn("error consumer transport created = {}, if false then already consumer added", consumer_transport_.get() != nullptr);
+				return;
+			}
+				
 			
 			assert(consumers_.find(peer_id) == consumers_.end());
 
@@ -147,20 +160,21 @@ namespace grt {
 		}
 		else if (grt::message_type::peer_remove == type) {
 			const auto peer_id = absl::any_cast<std::string>(msg);
+			spdlog::info("peer_remove {}", peer_id);
 			consumers_.erase(peer_id);
 		}
 		else if (grt::message_type::consumer_res == type) {
 			const auto m = absl::any_cast<json>(msg);
-			//const std::string id = m["id"];
+			spdlog::info("consumer_res m = ", m.dump());
 			const std::string status = m["status"];
 			if (status == "error") {
-				//todo log it
+				spdlog::error("consumer_res error = {}", m.dump());
 				return;
 			}
 			const std::string peerId = m["peerId"];
 
 			if (consumers_.find(peerId) != consumers_.end()) {
-				//todo Log it
+				spdlog::error("consumer_res error consumer not in list to remove with id {}", peerId);
 				return;
 			}
 			
@@ -187,22 +201,27 @@ namespace grt {
 			}
 			catch (...) {
 				//todo design this properly
-				std::cout << "\n handle this soon\n";
+				//std::cout << "\n handle this soon\n";
+				spdlog::error("exceptin occur in consumer_res functionality ");
 				assert(false);
 			}
 
 		}
 		else if (grt::message_type::consumer_connect_res == type) {
+				spdlog::info("consumer_connect_res");
 			consumer_transport_connect_response_.set_value();
 		}
-		else assert(false);
+		else {
+			spdlog::error("unknow type {} received complete msg {} ", type);
+			assert(false);
+		}
 	}
 
 	///mediasoupclient::SendTransport::Listener interface
 	std::future<std::string> 
 		media_soup_conference_handler::OnProduce(
 		const std::string& kind, nlohmann::json rtpParameters, const nlohmann::json& appData){
-
+		spdlog::info("OnProduce kind = {} ", kind);
 		const auto m = grt::make_produce_transport_req(send_transport_->GetId(), kind, rtpParameters);
 		signaller_->send(m);
 
@@ -213,7 +232,9 @@ namespace grt {
 	std::future<void>
 		media_soup_conference_handler::OnConnect(mediasoupclient::Transport* transport,
 			const nlohmann::json& dtlsParameters){
+		spdlog::info("OnConnect transport id = {}", transport->GetId());
 		if (transport == send_transport_.get()) {
+			spdlog::info("OnConnect send transport");
 			const auto m = grt::make_producer_transport_connect_req(transport->GetId(), dtlsParameters);
 			signaller_->send(m);
 			//assert(false);
@@ -224,7 +245,7 @@ namespace grt {
 			return promise.get_future();
 		}
 		else {
-			//cosumer transport
+			spdlog::info("OnConnect consumer transport");
 			std::promise<void> promise;
 				
 			consumer_transport_connect_response_ = std::move(promise);
@@ -238,7 +259,7 @@ namespace grt {
 	void
 		media_soup_conference_handler::OnConnectionStateChange(mediasoupclient::Transport* transport,
 			const std::string& connectionState) {
-		std::cout << "connectin state change " << connectionState << " id =" << transport->GetId() << '\n';
+		spdlog::info("onconnectionstatechange connectionState = {}, transport id = {}", connectionState, transport->GetId());
 	}
 
 	//Producer::Listener interfaces
@@ -259,6 +280,7 @@ namespace grt {
 
 	void consumer_handler::consumer(mediasoupclient::Consumer* consumer,
 		std::string const& kind) {
+		spdlog::info("consumer_handler::consumer called with media kind = {}", kind);
 		assert(consumer);
 		if (kind == "audio") {
 			assert(!audioConsumer_);
@@ -276,16 +298,21 @@ namespace grt {
 			//const auto r = util::set_video_renderer(video_receiver_.get());
 			//assert(r);
 			auto const id = consumer->GetId();
-			std::cout << "video renderer id " << id << '\n';
+			spdlog::info("consumer_handler::consumer video renderer id = {} ", id);
 			video_receiver_ = set_video_renderer(video_track, sender_, id);
 		}
-		else
+		else {
+			spdlog::error("unhandled kind = {}", kind);
 			assert(false);
+		}
+			
 	}
 
 	//consumer::Listener interfaces
 	void consumer_handler::OnTransportClose(mediasoupclient::Consumer* consumer) {
 		std::cout << "transport close " << consumer->GetId() << '\n';
+		spdlog::warn("tansport close id = {}", consumer->GetId());
+		assert(false);
 	}
 
 

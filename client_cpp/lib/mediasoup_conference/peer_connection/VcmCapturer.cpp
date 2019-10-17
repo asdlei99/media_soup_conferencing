@@ -5,7 +5,7 @@
 
 #include "modules/video_capture/video_capture_factory.h"
 #include "rtc_base/checks.h"
-#include "rtc_base/logging.h"
+#include "spdlog/spdlog.h"
 
 VcmCapturer::VcmCapturer() : vcm_(nullptr)
 {
@@ -57,8 +57,7 @@ VcmCapturer* VcmCapturer::Create(
 	std::unique_ptr<VcmCapturer> vcm_capturer(new VcmCapturer());
 	if (!vcm_capturer->Init(width, height, target_fps, capture_device_index))
 	{
-		RTC_LOG(LS_WARNING) << "Failed to create VcmCapturer(w = " << width << ", h = " << height
-		                    << ", fps = " << target_fps << ")";
+		spdlog::error("Failed to create VcmCapturer(w = {}, h = {}. fps={} )", width, height, target_fps);
 		return nullptr;
 	}
 	return vcm_capturer.release();

@@ -5,6 +5,7 @@
 #include "conference_handler.h"
 #include "signalling/media_soup_conferencing_signalling.h"
 #include "room_impl.h"
+#include "spdlog/spdlog.h"
 
 namespace grt {
 	std::future<absl::optional<std::string>>
@@ -13,9 +14,8 @@ namespace grt {
 
 		std::packaged_task<absl::optional<std::string>(absl::optional<std::string> const id)> task(
 			[](absl::optional<std::string> id){
-#ifdef _DEBUG
-			std::cout << "id received " << id.has_value() << '\n';
-#endif
+
+			spdlog::info("create room success = {}", id.has_value());
 			return id;
 		});
 		auto result  = task.get_future();
@@ -30,9 +30,7 @@ namespace grt {
 			std::string port) {
 
 		std::packaged_task<bool(std::string const)> task{ [](std::string const okay){
-#ifdef _DEBUG
-			std::cout << "room close response " << okay << '\n';
-#endif//
+			spdlog::info("room close respnse result = {}", okay);
 			return okay == "success";
 		} };
 		auto result = task.get_future();
@@ -44,12 +42,16 @@ namespace grt {
 		async_get_room_infos(std::string const server, std::string const port) {
 		std::packaged_task< absl::optional<util::room_list>(absl::optional<util::room_list>)> task{
 			[](absl::optional<util::room_list> list) {
+			spdlog::info("room info received from server is success = ", list.has_value());
 #ifdef _DEBUG
 			auto printer = [](const room_info info) {
-					std::cout << info.id_ << " name = " << info.name_ << '\n';
+					spdlog::info("room info : id = {} name = {}", info.id_, info.name_);
 			};
 			if(list.has_value())
 				std::for_each(list->begin(), list->end(), printer);
+			else {
+				spdlog::error("room info not received \n");
+			}
 #endif//_DEBUG
 
 			return list;
@@ -67,10 +69,11 @@ namespace grt {
 		std::packaged_task<
 			std::shared_ptr<room>(std::shared_ptr<signaller>)
 		> task{ [room_id](std::shared_ptr<signaller> signaller_)-> std::shared_ptr<room> {
-				if (signaller_.get() == nullptr) return nullptr;
-#ifdef _DEBUG
-				std::cout << "got server handle to server room" << '\n';
-#endif//
+				if (signaller_.get() == nullptr) {
+					spdlog::error("room join not success no signaller recevid from room id {}", room_id);
+					return nullptr;
+					}
+				spdlog::info("room join got siganaller for room = {}", room_id);
 				auto media_soup_confernce = std::make_unique< media_soup_conference_handler>(signaller_.get());
 				
 				auto signaller_callback_ = get_signaller_clb(

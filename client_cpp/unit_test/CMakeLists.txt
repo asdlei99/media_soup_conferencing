@@ -34,7 +34,7 @@ target_link_directories( ${EXE_NAME} PUBLIC
 
 # Public (interface) dependencies.
 target_link_libraries(${EXE_NAME} PUBLIC
-	display_manager
+#	display_manager
 
 	server_communication_util
 	signaller

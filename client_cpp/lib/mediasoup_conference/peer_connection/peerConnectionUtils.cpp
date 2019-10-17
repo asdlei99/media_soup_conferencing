@@ -8,7 +8,7 @@
 #include "pc/video_track_source.h"
 #include "modules/video_capture/video_capture_factory.h"
 #include "modules/video_capture/video_capture.h"
-#include <iostream>
+#include "spdlog/spdlog.h"
 
 static rtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> peerConnectionFactory{ nullptr };
 
@@ -60,6 +60,7 @@ static void createPeerConnectionFactory()
 
 	if (!signalingThread->Start() || !workerThread->Start())
 	{
+		spdlog::error("Thread start error in cretePeerConnectionFactory ");
 		throw std::runtime_error("Thread start errored");
 	}
 
